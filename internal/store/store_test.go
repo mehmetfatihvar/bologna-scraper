@@ -1,0 +1,160 @@
+package store
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+)
+
+// testStore, BOLOGNA_TEST_DB_URL verilmişse geçici bir şemada çalışan Store döndürür.
+// Örn: BOLOGNA_TEST_DB_URL=postgres://bologna:bologna@localhost:5432/bologna?sslmode=disable go test ./internal/store/
+func testStore(t *testing.T) *Store {
+	t.Helper()
+	dsn := os.Getenv("BOLOGNA_TEST_DB_URL")
+	if dsn == "" {
+		t.Skip("BOLOGNA_TEST_DB_URL yok; PostgreSQL entegrasyon testi atlandı")
+	}
+	ctx := context.Background()
+	admin, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := fmt.Sprintf("bologna_test_%d", time.Now().UnixNano())
+	if _, err := admin.Exec(ctx, "CREATE SCHEMA "+schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(context.Background(), "DROP SCHEMA "+schema+" CASCADE")
+		admin.Close()
+	})
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	st, err := Open(ctx, dsn+sep+"search_path="+schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(st.Close)
+	for i := 0; i < 2; i++ { // migrate idempotent olmalı
+		if err := st.Migrate(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return st
+}
+
+func ip(v int) *int         { return &v }
+func fp(v float64) *float64 { return &v }
+func (s *Store) count(t *testing.T, q string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := s.pool.QueryRow(context.Background(), q, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestStoreRoundTrip(t *testing.T) {
+	st := testStore(t)
+	ctx := context.Background()
+
+	// Birim: aynı enstitü iki seviyede görünür, seviyeler birikmeli.
+	must(t, st.Unit(ctx, 7, "FEN BİLİMLERİ ENSTİTÜSÜ", "yukseklisans"))
+	must(t, st.Unit(ctx, 7, "", "doktora"))
+	must(t, st.Unit(ctx, 7, "", "doktora"))
+	var levels []string
+	var name string
+	must(t, st.pool.QueryRow(ctx, `SELECT name, levels FROM units WHERE id = 7`).Scan(&name, &levels))
+	if name != "FEN BİLİMLERİ ENSTİTÜSÜ" || strings.Join(levels, ",") != "yukseklisans,doktora" {
+		t.Fatalf("unit: %q %v", name, levels)
+	}
+
+	refA := parse.ProgramRef{ID: 1, UnitID: 7, Level: "yukseklisans", Name: "A"}
+	refB := parse.ProgramRef{ID: 2, UnitID: 7, Level: "doktora"}
+	must(t, st.Program(ctx, refA, &parse.Program{Name: "PROGRAM A", Duration: ip(2), Info: map[string]string{"Dili": "Türkçe"}, Sections: map[string]string{}}, "u"))
+	must(t, st.Program(ctx, refB, &parse.Program{Info: map[string]string{}, Sections: map[string]string{}}, "u"))
+
+	// Çıktılar: metin tahmini (5 madde) → resmî sayfa (3 madde) → düşük öncelikli kaynak ezemez.
+	var guess []parse.Outcome
+	for i := 1; i <= 5; i++ {
+		guess = append(guess, parse.Outcome{No: i, Description: fmt.Sprintf("tahmin %d", i)})
+	}
+	must(t, st.ProgramOutcomes(ctx, 1, guess, SourceAboutText))
+	must(t, st.ProgramOutcomes(ctx, 1, []parse.Outcome{{No: 1, Description: "resmi 1"}, {No: 2, Description: "resmi 2"}, {No: 3, Description: "resmi 3"}}, SourceOutcomesPage))
+	must(t, st.ProgramOutcomes(ctx, 1, []parse.Outcome{{No: 1, Description: "tahmin tekrar"}}, SourceAboutText))
+	if n := st.count(t, `SELECT count(*) FROM program_outcomes WHERE program_id = 1`); n != 3 {
+		t.Fatalf("yanlış pozitif maddeler silinmedi: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM program_outcomes WHERE program_id = 1 AND source = 'outcomes_page' AND description LIKE 'resmi%'`); n != 3 {
+		t.Fatalf("öncelik bozuk: %d", n)
+	}
+
+	// Ders planı: ortak ders (10) iki programda; ikinci çalıştırma planı değiştirir.
+	must(t, st.Curriculum(ctx, 1, []parse.CurriculumEntry{
+		{CourseID: 10, Semester: 1, Code: "MAT501", Name: "İleri Matematik", Type: "zorunlu", ECTS: fp(7.5)},
+		{CourseID: 11, Semester: 2, Code: "MAT502"},
+	}))
+	must(t, st.Curriculum(ctx, 2, []parse.CurriculumEntry{{CourseID: 10, Type: "secmeli"}}))
+	must(t, st.Curriculum(ctx, 1, []parse.CurriculumEntry{{CourseID: 10, Semester: 1, Type: "zorunlu"}}))
+	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE program_id = 1`); n != 1 {
+		t.Fatalf("plandan çıkan ders silinmedi: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE course_id = 10`); n != 2 {
+		t.Fatalf("N:M ilişki: %d", n)
+	}
+
+	// Ders detayı: alt tablolar her yazımda değiştirilir, matris sahibi programa (1) bağlanır.
+	d := &parse.CourseDetail{
+		Code: "MAT501", Name: "İleri Matematik", ECTS: fp(7.5), Details: map[string]string{"Dersin Dili": "Türkçe"},
+		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "a"}, {No: 2, Description: "b"}},
+		WeeklyTopics:     []parse.WeeklyTopic{{Week: ip(1), Topic: "giriş"}},
+		Assessments:      []parse.Assessment{{Activity: "Vize", Percentage: fp(40)}},
+		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(5)}, {No: 4, Description: "matristen", Level: ip(2)}},
+	}
+	since := time.Now().Add(-time.Minute)
+	if fresh, _ := st.CourseFresh(ctx, 10, since); fresh {
+		t.Fatal("detay yazılmadan taze sayıldı")
+	}
+	must(t, st.Course(ctx, 1, 10, d, "u"))
+	d.LearningOutcomes = d.LearningOutcomes[:1]
+	must(t, st.Course(ctx, 2, 10, d, "u"))
+	if fresh, _ := st.CourseFresh(ctx, 10, since); !fresh {
+		t.Fatal("CourseFresh")
+	}
+	if n := st.count(t, `SELECT count(*) FROM course_learning_outcomes WHERE course_id = 10`); n != 1 {
+		t.Fatalf("alt tablo değiştirilmedi: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_course_outcome_matrix WHERE course_id = 10 AND program_id = 1`); n != 2 {
+		t.Fatalf("matris: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM program_outcomes WHERE program_id = 1 AND no = 4 AND source = 'course_matrix'`); n != 1 {
+		t.Fatalf("matristen gelen PÇ oluşmadı: %d", n)
+	}
+
+	// Çalışma kaydı
+	run, err := st.StartRun(ctx, map[string]any{"x": 1})
+	must(t, err)
+	st.LogError(ctx, run, "http://x", "boom")
+	must(t, st.FinishRun(ctx, run, "partial", 2, 1, 1))
+	if n := st.count(t, `SELECT count(*) FROM scrape_errors WHERE run_id = $1`, run); n != 1 {
+		t.Fatal("scrape_errors")
+	}
+	if _, err := st.Stats(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func must(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}

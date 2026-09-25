@@ -7,11 +7,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
 )
 
 //go:embed schema.sql
@@ -77,10 +78,11 @@ func nzID(v int64) *int64 {
 
 func (s *Store) Unit(ctx context.Context, id int64, name, level string) error {
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO units (id, name, level) VALUES ($1, $2, $3)
+		INSERT INTO units (id, name, levels) VALUES ($1, $2, CASE WHEN $3::text IS NULL THEN '{}' ELSE ARRAY[$3::text] END)
 		ON CONFLICT (id) DO UPDATE SET
-			name  = COALESCE(EXCLUDED.name, units.name),
-			level = COALESCE(EXCLUDED.level, units.level),
+			name   = COALESCE(EXCLUDED.name, units.name),
+			levels = CASE WHEN $3::text IS NULL OR $3::text = ANY(units.levels) THEN units.levels
+			              ELSE array_append(units.levels, $3::text) END,
 			updated_at = now()`, id, nz(name), nz(level))
 	return err
 }
@@ -134,11 +136,32 @@ const upsertOutcomeSQL = `
 	   OR (CASE program_outcomes.source WHEN 'outcomes_page' THEN 3 WHEN 'course_matrix' THEN 2 ELSE 1 END) <= $5`
 
 func (s *Store) ProgramOutcomes(ctx context.Context, programID int64, outs []parse.Outcome, source string) error {
-	b := &pgx.Batch{}
-	for _, o := range outs {
-		b.Queue(upsertOutcomeSQL, programID, o.No, nz(o.Description), source, sourcePriority(source))
-	}
-	return s.pool.SendBatch(ctx, b).Close()
+	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		if source == SourceOutcomesPage {
+			// Resmî liste geldi: metinden sezgisel çıkarılmış ve listede olmayan maddeler yanlış pozitiftir.
+			nos := make([]int32, len(outs))
+			for i, o := range outs {
+				nos[i] = int32(o.No)
+			}
+			if _, err := tx.Exec(ctx, `DELETE FROM program_outcomes WHERE program_id = $1 AND source = $2 AND NOT (no = ANY($3))`,
+				programID, SourceAboutText, nos); err != nil {
+				return err
+			}
+		}
+		b := &pgx.Batch{}
+		for _, o := range outs {
+			b.Queue(upsertOutcomeSQL, programID, o.No, nz(o.Description), source, sourcePriority(source))
+		}
+		return tx.SendBatch(ctx, b).Close()
+	})
+}
+
+// CourseFresh, dersin detayı since'ten sonra yazılmışsa true döner (scraper.FreshChecker).
+func (s *Store) CourseFresh(ctx context.Context, courseID int64, since time.Time) (bool, error) {
+	var ok bool
+	err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM courses WHERE id = $1 AND detail_scraped_at >= $2)`,
+		courseID, since).Scan(&ok)
+	return ok, err
 }
 
 func (s *Store) Curriculum(ctx context.Context, programID int64, entries []parse.CurriculumEntry) error {

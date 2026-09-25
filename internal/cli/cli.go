@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -18,10 +19,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"bologna-scraper/internal/fetch"
-	"bologna-scraper/internal/parse"
-	"bologna-scraper/internal/scraper"
-	"bologna-scraper/internal/store"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/scraper"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/store"
 )
 
 type globals struct {
@@ -216,20 +217,23 @@ func scrapeCmd() *cobra.Command {
 		levels      []string
 		all         bool
 		typ         string
-		programs    []int64
+		programs    []string
 		fromFile    string
 		workers     int
 		limit       int
 		skipDetails bool
+		freshWithin time.Duration
 		dryRun      bool
 	)
 	cmd := &cobra.Command{
 		Use:   "scrape",
 		Short: "Programları, ders planlarını ve ders detaylarını çekip veritabanına yazar",
 		Example: `  bologna scrape --program 352                   # tek program (curSunit)
+  bologna scrape -p "https://obs.mersin.edu.tr/oibs/bologna/index.aspx?lang=tr&curOp=showPac&curUnit=12&curSunit=352"
   bologna scrape --level lisans --workers 3
   bologna scrape --all --rps 1.5
   bologna scrape --from-file programlar.json      # discover --json çıktısı
+  bologna scrape --all --fresh-within 24h        # kesilen taramayı sürdür
   bologna scrape --program 352 --dry-run | jq .   # DB'ye yazmadan JSON göster`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -238,7 +242,7 @@ func scrapeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails}
+			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, FreshWithin: freshWithin}
 
 			// Hedef programlar
 			var refs []parse.ProgramRef
@@ -253,7 +257,11 @@ func scrapeCmd() *cobra.Command {
 				}
 			case len(programs) > 0:
 				for _, p := range programs {
-					refs = append(refs, parse.ProgramRef{ID: p})
+					ref, err := parseProgramArg(p)
+					if err != nil {
+						return err
+					}
+					refs = append(refs, ref)
 				}
 			default:
 				lv, err := levelList(levels, all)
@@ -308,7 +316,7 @@ func scrapeCmd() *cobra.Command {
 				_ = st.FinishRun(context.Background(), runID, status, stats.Programs, stats.Courses, stats.Errors)
 			}
 			log.Info("bitti", "durum", status, "program", stats.Programs, "ders", stats.Courses,
-				"hata", stats.Errors, "süre", time.Since(start).Round(time.Second), "run_id", runID)
+				"atlanan_ders", stats.Skipped, "hata", stats.Errors, "süre", time.Since(start).Round(time.Second), "run_id", runID)
 			if status == "interrupted" {
 				return errors.New("kullanıcı tarafından durduruldu")
 			}
@@ -319,13 +327,37 @@ func scrapeCmd() *cobra.Command {
 	fl.StringSliceVarP(&levels, "level", "l", nil, "seviye(ler): onlisans,lisans,yukseklisans,doktora")
 	fl.BoolVar(&all, "all", false, "tüm seviyeler")
 	fl.StringVar(&typ, "type", "", "unitSelection.aspx 'type' parametresini elle ver")
-	fl.Int64SliceVarP(&programs, "program", "p", nil, "program ID'leri (curSunit), virgülle veya tekrar ederek")
+	fl.StringSliceVarP(&programs, "program", "p", nil, "program ID'leri (curSunit) veya sitedeki program adresleri; virgülle veya tekrar ederek")
 	fl.StringVar(&fromFile, "from-file", "", "discover --json çıktısından program listesi")
 	fl.IntVarP(&workers, "workers", "w", 2, "paralel işlenecek program sayısı")
 	fl.IntVar(&limit, "limit", 0, "en fazla N program işle (test için)")
 	fl.BoolVar(&skipDetails, "skip-details", false, "ders detay sayfalarını atla (sadece program + ders planı)")
+	fl.DurationVar(&freshWithin, "fresh-within", 0, "detayı bu süre içinde yazılmış dersleri atla (ör. 24h; kesilen taramayı sürdürmek için)")
 	fl.BoolVar(&dryRun, "dry-run", false, "veritabanına yazma; sonuçları JSON satırları olarak stdout'a bas")
 	return cmd
+}
+
+var (
+	reArgSunit = regexp.MustCompile(`(?i)curSunit=(\d+)`)
+	reArgUnit  = regexp.MustCompile(`(?i)curUnit=(\d+)`)
+)
+
+// parseProgramArg, "352" veya "...index.aspx?curUnit=12&curSunit=352" biçimini kabul eder.
+func parseProgramArg(s string) (parse.ProgramRef, error) {
+	s = strings.TrimSpace(s)
+	if id, err := strconv.ParseInt(s, 10, 64); err == nil && id > 0 {
+		return parse.ProgramRef{ID: id}, nil
+	}
+	m := reArgSunit.FindStringSubmatch(s)
+	if m == nil {
+		return parse.ProgramRef{}, fmt.Errorf("program %q: sayı ya da curSunit= içeren bir adres olmalı", s)
+	}
+	ref := parse.ProgramRef{}
+	ref.ID, _ = strconv.ParseInt(m[1], 10, 64)
+	if u := reArgUnit.FindStringSubmatch(s); u != nil {
+		ref.UnitID, _ = strconv.ParseInt(u[1], 10, 64)
+	}
+	return ref, nil
 }
 
 // ---------------- inspect ----------------

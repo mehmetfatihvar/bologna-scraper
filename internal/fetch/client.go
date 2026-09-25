@@ -10,13 +10,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding/charmap"
 )
 
 type Options struct {
@@ -71,10 +77,12 @@ func New(o Options) (*Client, error) {
 			return nil, err
 		}
 	}
+	// ASP.NET sayfaları oturum çerezi (ASP.NET_SessionId) bekleyebilir.
+	jar, _ := cookiejar.New(nil)
 	return &Client{
 		base:     u,
 		opts:     o,
-		http:     &http.Client{Timeout: o.Timeout},
+		http:     &http.Client{Timeout: o.Timeout, Jar: jar},
 		interval: time.Duration(float64(time.Second) / o.RPS),
 	}, nil
 }
@@ -143,10 +151,17 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 		}
 	}
 
-	var lastErr error
+	var (
+		lastErr    error
+		retryAfter time.Duration
+	)
 	for attempt := 0; attempt <= c.opts.Retries; attempt++ {
 		if attempt > 0 {
-			backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+			// Üstel geri çekilme + jitter; sunucu Retry-After verdiyse ona uy.
+			backoff := time.Duration(1<<uint(attempt-1))*time.Second + time.Duration(rand.Int64N(int64(500*time.Millisecond)))
+			if retryAfter > backoff {
+				backoff = retryAfter
+			}
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -156,7 +171,8 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 		if err := c.wait(ctx); err != nil {
 			return nil, err
 		}
-		body, status, err := c.do(ctx, rawURL)
+		body, status, ra, err := c.do(ctx, rawURL)
+		retryAfter = ra
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
@@ -178,22 +194,58 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 	return nil, lastErr
 }
 
-func (c *Client) do(ctx context.Context, rawURL string) ([]byte, int, error) {
+func (c *Client) do(ctx context.Context, rawURL string) ([]byte, int, time.Duration, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	req.Header.Set("User-Agent", c.opts.UserAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
 	req.Header.Set("Accept-Language", "tr-TR,tr;q=0.9,en;q=0.5")
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 	defer resp.Body.Close()
+	ra := parseRetryAfter(resp.Header.Get("Retry-After"))
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 20<<20))
 	if err != nil {
-		return nil, resp.StatusCode, err
+		return nil, resp.StatusCode, ra, err
 	}
-	return body, resp.StatusCode, nil
+	if resp.StatusCode == http.StatusOK {
+		body = toUTF8(body, resp.Header.Get("Content-Type"))
+	}
+	return body, resp.StatusCode, ra, nil
+}
+
+// toUTF8, sayfayı (Content-Type / <meta charset> / içerik tahmini ile) UTF-8'e çevirir.
+// Eski ASP.NET sayfaları windows-1254 / ISO-8859-9 olabilir; parser UTF-8 bekler.
+func toUTF8(body []byte, contentType string) []byte {
+	enc, name, certain := charset.DetermineEncoding(body, contentType)
+	if name == "utf-8" || enc == nil {
+		return body
+	}
+	if !certain && name == "windows-1252" { // bildirim yok: Türkçe site için 1254 daha doğru tahmin
+		enc = charmap.Windows1254
+	}
+	out, err := enc.NewDecoder().Bytes(body)
+	if err != nil {
+		return body
+	}
+	return out
+}
+
+// parseRetryAfter, saniye veya HTTP tarihi biçimindeki Retry-After başlığını okur (en fazla 2 dk).
+func parseRetryAfter(v string) time.Duration {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0
+	}
+	var d time.Duration
+	if secs, err := strconv.Atoi(v); err == nil {
+		d = time.Duration(secs) * time.Second
+	} else if t, err := http.ParseTime(v); err == nil {
+		d = time.Until(t)
+	}
+	return min(max(d, 0), 2*time.Minute)
 }

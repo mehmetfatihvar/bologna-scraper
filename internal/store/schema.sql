@@ -5,9 +5,10 @@
 CREATE TABLE IF NOT EXISTS units (
     id          BIGINT PRIMARY KEY,              -- curUnit (fakülte / enstitü / MYO)
     name        TEXT,
-    level       TEXT,
+    levels      TEXT[] NOT NULL DEFAULT '{}',    -- enstitüler birden çok seviyede olabilir
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE units ADD COLUMN IF NOT EXISTS levels TEXT[] NOT NULL DEFAULT '{}';  -- eski şemadan geçiş
 
 CREATE TABLE IF NOT EXISTS programs (
     id                  BIGINT PRIMARY KEY,      -- curSunit
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS courses (
 );
 CREATE INDEX IF NOT EXISTS courses_program_idx ON courses(program_id);
 CREATE INDEX IF NOT EXISTS courses_code_idx ON courses(code);
+CREATE INDEX IF NOT EXISTS courses_detail_scraped_idx ON courses(detail_scraped_at);
 
 -- Ders planı: bir ders birden fazla programın planında yer alabilir (N:M).
 CREATE TABLE IF NOT EXISTS program_courses (
@@ -134,9 +136,10 @@ CREATE TABLE IF NOT EXISTS course_workloads (
 CREATE TABLE IF NOT EXISTS course_program_outcomes (
     course_id           BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     program_outcome_id  BIGINT NOT NULL REFERENCES program_outcomes(id) ON DELETE CASCADE,
-    contribution        SMALLINT,
+    contribution        SMALLINT CHECK (contribution BETWEEN 0 AND 5),
     PRIMARY KEY (course_id, program_outcome_id)
 );
+CREATE INDEX IF NOT EXISTS course_program_outcomes_po_idx ON course_program_outcomes(program_outcome_id);
 
 CREATE TABLE IF NOT EXISTS scrape_runs (
     id           BIGSERIAL PRIMARY KEY,
@@ -156,6 +159,7 @@ CREATE TABLE IF NOT EXISTS scrape_errors (
     message  TEXT,
     at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS scrape_errors_run_idx ON scrape_errors(run_id);
 
 CREATE OR REPLACE VIEW v_course_outcome_matrix AS
 SELECT p.id  AS program_id,

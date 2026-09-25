@@ -7,5 +7,20 @@ services:
       POSTGRES_DB: bologna
     ports: ["5432:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bologna"]
+      interval: 2s
+      retries: 15
+
+  # docker compose run --rm scraper scrape --all
+  scraper:
+    build: .
+    profiles: [scrape]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      BOLOGNA_DB_URL: postgres://bologna:bologna@db:5432/bologna?sslmode=disable
+    command: ["scrape", "--level", "lisans"]
+
 volumes:
   pgdata:

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -154,35 +155,48 @@ func ExtractProgramOutcomesFromText(content string) []Outcome {
 	return ExtractNumbered(string([]rune(content)[runeIdx:]))
 }
 
+var reNumbered = regexp.MustCompile(`(\d{1,2})\s*([.)])\s*`)
+
+func isDigit(b byte) bool { return b >= '0' && b <= '9' }
+
 // ExtractNumbered, 1'den başlayıp ardışık artan "N." / "N)" maddelerini ayırır.
+// Sıradaki numarayı beklemeyen eşleşmeler (ör. metin içindeki "3." veya "2.5") atlanır.
 func ExtractNumbered(s string) []Outcome {
-	var out []Outcome
-	pos, prevEnd, cur := 0, -1, 1
-	for {
-		re := regexp.MustCompile(fmt.Sprintf(`(?:^|[^\d])(%d)\s*[.)]\s*`, cur))
-		m := re.FindStringSubmatchIndex(s[pos:])
-		if m == nil {
-			break
+	type mark struct{ no, start, end int }
+	var marks []mark
+	next := 1
+	for _, m := range reNumbered.FindAllStringSubmatchIndex(s, -1) {
+		if m[2] > 0 && isDigit(s[m[2]-1]) { // "12." içindeki "2." değil
+			continue
 		}
-		start, end := pos+m[2], pos+m[1]
-		if prevEnd >= 0 {
-			out = append(out, Outcome{No: cur - 1, Description: Clean(s[prevEnd:start])})
+		if m[5] < len(s) && isDigit(s[m[5]]) { // "2.5" ondalık sayı, madde değil
+			continue
 		}
-		prevEnd, pos = end, end
-		cur++
-		if cur > 60 {
+		n, _ := strconv.Atoi(s[m[2]:m[3]])
+		if n != next {
+			continue
+		}
+		marks = append(marks, mark{n, m[2], m[1]})
+		next++
+		if next > 60 {
 			break
 		}
 	}
-	if prevEnd >= 0 {
-		last := s[prevEnd:]
-		if i := strings.Index(last, "\n"); i >= 0 {
-			last = last[:i]
-		}
-		out = append(out, Outcome{No: cur - 1, Description: Clean(last)})
-	}
-	if len(out) < 2 { // tek madde büyük ihtimalle yanlış pozitif
+	if len(marks) < 2 { // tek madde büyük ihtimalle yanlış pozitif
 		return nil
+	}
+	out := make([]Outcome, 0, len(marks))
+	for i, mk := range marks {
+		var desc string
+		if i+1 < len(marks) {
+			desc = s[mk.end:marks[i+1].start]
+		} else {
+			desc = s[mk.end:]
+			if j := strings.Index(desc, "\n"); j >= 0 {
+				desc = desc[:j]
+			}
+		}
+		out = append(out, Outcome{No: mk.no, Description: Clean(desc)})
 	}
 	return out
 }

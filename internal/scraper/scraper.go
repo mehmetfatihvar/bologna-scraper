@@ -7,14 +7,14 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net/url"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
-	"net/url"
-
-	"bologna-scraper/internal/fetch"
-	"bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
 )
 
 // OİBS Bologna modülünün sayfa adları. Site farklı isim kullanıyorsa sadece burayı değiştirin.
@@ -43,23 +43,33 @@ type Sink interface {
 	Course(ctx context.Context, programID, courseID int64, d *parse.CourseDetail, url string) error
 }
 
+// FreshChecker, isteğe bağlı olarak Sink tarafından uygulanır: ders detayı
+// verilen zamandan sonra zaten yazılmışsa true döner (kesilen taramayı sürdürmek için).
+type FreshChecker interface {
+	CourseFresh(ctx context.Context, courseID int64, since time.Time) (bool, error)
+}
+
 type Scraper struct {
 	Client      *fetch.Client
 	Sink        Sink
 	Log         *slog.Logger
 	Workers     int
 	SkipDetails bool
+	// FreshWithin > 0 ise, detayı bu süre içinde yazılmış dersler tekrar indirilmez.
+	FreshWithin time.Duration
 	OnError     func(url string, err error)
 
-	programs, courses, errors atomic.Int64
+	programs, courses, skipped, errors atomic.Int64
+	done                               atomic.Int64 // biten program (başarılı/başarısız)
+	courseSeen                         sync.Map     // curCourse -> struct{}: aynı çalışmada bir kez indir
 }
 
 type Stats struct {
-	Programs, Courses, Errors int64
+	Programs, Courses, Skipped, Errors int64
 }
 
 func (s *Scraper) Stats() Stats {
-	return Stats{s.programs.Load(), s.courses.Load(), s.errors.Load()}
+	return Stats{s.programs.Load(), s.courses.Load(), s.skipped.Load(), s.errors.Load()}
 }
 
 func (s *Scraper) fail(u string, err error) {
@@ -146,12 +156,19 @@ func (s *Scraper) Run(ctx context.Context, refs []parse.ProgramRef) Stats {
 	}
 	jobs := make(chan parse.ProgramRef)
 	var wg sync.WaitGroup
+	start, total := time.Now(), int64(len(refs))
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for ref := range jobs {
 				s.program(ctx, ref)
+				if ctx.Err() != nil {
+					continue
+				}
+				n := s.done.Add(1)
+				eta := time.Duration(float64(time.Since(start)) / float64(n) * float64(total-n)).Round(time.Second)
+				s.Log.Info("ilerleme", "biten", n, "toplam", total, "ders", s.courses.Load(), "hata", s.errors.Load(), "kalan_süre", eta)
 			}
 		}()
 	}
@@ -269,10 +286,21 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		return
 	}
 
-	// 5) Ders detayları
+	// 5) Ders detayları. Birden çok programın planındaki ortak dersler bir kez indirilir;
+	// katkı matrisi dersin sahibi olan programa bağlanır (bkz. store.Course).
+	fc, _ := s.Sink.(FreshChecker)
 	for _, e := range entries {
 		if ctx.Err() != nil {
 			return
+		}
+		if _, dup := s.courseSeen.LoadOrStore(e.CourseID, struct{}{}); dup {
+			continue
+		}
+		if s.FreshWithin > 0 && fc != nil {
+			if fresh, err := fc.CourseFresh(ctx, e.CourseID, time.Now().Add(-s.FreshWithin)); err == nil && fresh {
+				s.skipped.Add(1)
+				continue
+			}
 		}
 		du := s.Client.URL(PageCourseDetail, url.Values{"curCourse": {id(e.CourseID)}})
 		b, err := s.Client.Get(ctx, du)

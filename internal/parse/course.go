@@ -3,6 +3,8 @@ package parse
 import (
 	"fmt"
 	"io"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -321,11 +323,16 @@ func parseWorkload(t *Table) []Workload {
 	return out
 }
 
-// parseMatrix iki düzeni destekler:
+// parseMatrix üç düzeni destekler:
 //
 //	(a) No | Program Çıktısı | Katkı Düzeyi (sayı)
 //	(b) No | Program Çıktısı | 1 | 2 | 3 | 4 | 5   (işaretli sütun = düzey)
+//	(c) yatay: başlık PÇ1 | PÇ2 | … , altında düzey satır(lar)ı (ör. ÖÇ×PÇ matrisi);
+//	    birden çok satır varsa her PÇ için en yüksek düzey alınır.
 func parseMatrix(t *Table) []OutcomeContribution {
+	if out, ok := parseWideMatrix(t); ok {
+		return out
+	}
 	hi, hdr := t.FindHeader("katki", "duzey", "no", "cikti", "1", "5")
 	levelCols := map[int]int{} // sütun -> düzey
 	for i, h := range hdr {
@@ -349,8 +356,8 @@ func parseMatrix(t *Table) []OutcomeContribution {
 			}
 		}
 		if len(levelCols) >= 3 {
-			for col, lvl := range levelCols {
-				if strings.TrimSpace(r.Cell(col)) != "" {
+			for col, lvl := range levelCols { // birden çok işaret varsa en yükseği (deterministik)
+				if strings.TrimSpace(r.Cell(col)) != "" && (oc.Level == nil || lvl > *oc.Level) {
 					l := lvl
 					oc.Level = &l
 				}
@@ -372,4 +379,54 @@ func parseMatrix(t *Table) []OutcomeContribution {
 		out = append(out, oc)
 	}
 	return out
+}
+
+// reOutcomeHeader: "PÇ1", "PÖÇ 2", "PO3", "P.Ç.4" gibi yatay matris başlıkları.
+var reOutcomeHeader = regexp.MustCompile(`^p[a-z.]{0,4}\s*(\d{1,2})$`)
+
+func parseWideMatrix(t *Table) ([]OutcomeContribution, bool) {
+	for hi, r := range t.Rows {
+		if hi > 3 {
+			break
+		}
+		cols := map[int]int{} // sütun -> PÇ no
+		for j, c := range r.Cells {
+			if m := reOutcomeHeader.FindStringSubmatch(Norm(c.Text)); m != nil {
+				n, _ := strconv.Atoi(m[1])
+				cols[j] = n
+			}
+		}
+		if len(cols) < 2 {
+			continue
+		}
+		best := map[int]*int{}
+		var order []int
+		for j := 0; j < len(r.Cells); j++ {
+			if n, ok := cols[j]; ok {
+				if _, dup := best[n]; !dup {
+					best[n] = nil
+					order = append(order, n)
+				}
+			}
+		}
+		// Başlık satırı ile veri satırlarının hücre sayısı farklıysa (ör. köşe hücresi yok) sağdan hizala.
+		for _, row := range t.Rows[hi+1:] {
+			shift := len(row.Cells) - len(r.Cells)
+			for j, n := range cols {
+				v := Int(row.Cell(j + shift))
+				if v == nil || *v > 5 {
+					continue
+				}
+				if best[n] == nil || *v > *best[n] {
+					best[n] = v
+				}
+			}
+		}
+		out := make([]OutcomeContribution, 0, len(order))
+		for _, n := range order {
+			out = append(out, OutcomeContribution{No: n, Level: best[n]})
+		}
+		return out, true
+	}
+	return nil, false
 }

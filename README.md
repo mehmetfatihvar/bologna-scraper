@@ -6,12 +6,16 @@ ilişkileri koruyarak PostgreSQL'e yazan Go CLI.
 ## Kurulum
 
 ```bash
-go mod tidy                 # go.sum üretir (Go 1.22+)
+# Go 1.22+
+go install github.com/mehmetfatihvar/staj/staj/bologna-scraper/cmd/bologna@latest
+# veya repo içinden:
 make db                     # docker ile PostgreSQL 16 (isteğe bağlı)
 make build                  # bin/bologna
 export BOLOGNA_DB_URL="postgres://bologna:bologna@localhost:5432/bologna?sslmode=disable"
 bin/bologna migrate
 ```
+
+Docker ile hepsi birden: `docker compose run --rm scraper scrape --all`
 
 ## Komutlar
 
@@ -20,8 +24,10 @@ bin/bologna migrate
 | `bologna migrate` | Şemayı oluşturur (idempotent; `scrape` da otomatik çalıştırır) |
 | `bologna discover -l lisans [--json]` | Birim/programları listeler, DB'ye yazmaz |
 | `bologna scrape -p 352` | Tek program (curSunit) |
+| `bologna scrape -p "https://obs.mersin.edu.tr/oibs/bologna/index.aspx?...&curUnit=12&curSunit=352"` | Tarayıcıdaki adresi doğrudan verin |
 | `bologna scrape -l lisans,onlisans -w 3` | Seviye(ler)in tümü |
 | `bologna scrape --all --rps 1.5` | Her şey |
+| `bologna scrape --all --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış ders detaylarını atlar |
 | `bologna scrape --from-file progs.json` | `discover --json` çıktısından |
 | `bologna scrape -p 352 --dry-run \| jq` | DB'ye yazmadan JSON |
 | `bologna inspect "progCourses.aspx?curSunit=352"` | Sayfayı parser'ın gözünden gösterir |
@@ -31,11 +37,15 @@ bin/bologna migrate
 Ortak bayraklar: `--rps` (varsayılan 2 istek/sn, **tüm worker'lar toplamı**), `--retries`,
 `--timeout`, `--cache-dir ./cache` + `--use-cache` (parser geliştirirken sunucuya tekrar gitmemek için),
 `-v` (debug log), `--log-json`. Ctrl+C güvenle durdurur; çalışma `scrape_runs`'a `interrupted` yazılır.
+Her program bitince `ilerleme` logu (biten/toplam, kalan süre tahmini) basılır.
+
+HTTP katmanı: ASP.NET oturum çerezi saklanır, `windows-1254`/`ISO-8859-9` sayfalar UTF-8'e çevrilir,
+429/5xx'te üstel geri çekilme + `Retry-After` uygulanır, 404 tekrar denenmez.
 
 ## Veri modeli
 
 ```
-units (curUnit) 1─N programs (curSunit) 1─N program_outcomes (PÇ no)
+units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
                           │                            │
                           N─M courses (curCourse) ──── course_program_outcomes (katkı 1-5)
                    program_courses                │
@@ -47,8 +57,13 @@ units (curUnit) 1─N programs (curSunit) 1─N program_outcomes (PÇ no)
 ```
 
 - Anahtarlar OİBS'nin kendi ID'leri → tekrar çalıştırmak kopya üretmez, günceller.
-- Bir ders birden çok programın planında olabilir (`program_courses`); `courses.program_id` dersin sahibi olan programdır ve katkı matrisi o programın çıktılarına bağlanır.
+  Ders planı ve dersin alt tabloları her yazımda **değiştirilir** (plandan çıkan ders ilişkisi silinir).
+- Bir ders birden çok programın planında olabilir (`program_courses`); detay sayfası bir çalışmada
+  yalnızca bir kez indirilir. `courses.program_id` dersin sahibi (ilk yazan) programdır ve katkı matrisi o programın çıktılarına bağlanır.
+- `units.levels` bir dizidir: enstitüler hem yüksek lisans hem doktora programı barındırır.
 - Program çıktısı açıklamaları üç kaynaktan gelir, öncelik sırası: `outcomes_page` > `course_matrix` > `about_text` (`program_outcomes.source`).
+  Resmî çıktı sayfası geldiğinde metinden tahmin edilip listede olmayan maddeler silinir.
+- Katkı matrisi üç düzende okunur: `No | Çıktı | Düzey`, `No | Çıktı | 1..5 (X işaretli)` ve yatay `PÇ1 | PÇ2 | …` (ÖÇ×PÇ ise her PÇ için en yüksek düzey).
 - Tanınmayan bölümler kaybolmaz: `programs.sections`, `programs.info`, `courses.details` (JSONB).
 - Hazır view'lar: `v_curriculum`, `v_course_outcome_matrix`. Hatalar: `scrape_errors`.
 
@@ -62,5 +77,19 @@ ilgili `Norm` kalıbını düzeltin, gerçek HTML'i `--save` ile `testdata`'ya e
 
 ## Testler
 
-`go test ./...` — `internal/parse/testdata` altındaki fixture'lar sentetiktir (gerçek sayfa yapısı örnek alınarak yazıldı).
-Gerçek sayfaları `inspect --save` ile kaydedip fixture olarak eklemeniz önerilir.
+```bash
+make test               # parser, HTTP istemcisi (httptest), scraper uçtan uca (fixture sunucusu), CLI
+make test-integration   # + PostgreSQL (BOLOGNA_TEST_DB_URL; geçici şema açar, sonunda siler)
+make lint
+```
+
+CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
+
+> **Önemli:** `internal/parse/testdata` altındaki fixture'lar **sentetiktir**; gerçek OİBS sayfasıyla
+> henüz doğrulanmadı. İlk iş olarak gerçek sayfaları kaydedip parser'ı onlara karşı kontrol edin:
+>
+> ```bash
+> bologna inspect "unitSelection.aspx?type=lis" --as units --save internal/parse/testdata/real_units.html
+> bologna inspect "progCourses.aspx?curSunit=<id>" --save internal/parse/testdata/real_courses.html
+> bologna inspect "progCourseDetails.aspx?curCourse=<id>" --as course
+> ```

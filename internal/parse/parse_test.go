@@ -106,3 +106,43 @@ func TestUnits(t *testing.T) {
 		t.Fatalf("got %+v", ps)
 	}
 }
+
+func TestExtractNumbered(t *testing.T) {
+	got := ExtractNumbered("Giriş 2. paragraf. 1. Analiz eder. 2.5 puanlık 2) Tasarlar 12. değil 3. Uygular\nsonraki satır")
+	if len(got) != 3 || got[0].Description != "Analiz eder. 2.5 puanlık" || got[1].Description != "Tasarlar 12. değil" || got[2].Description != "Uygular" {
+		t.Fatalf("got %+v", got)
+	}
+	if ExtractNumbered("sadece 1. madde") != nil {
+		t.Fatal("tek madde yanlış pozitif sayılmamalı")
+	}
+}
+
+func TestMatrixMarkedColumnsDeterministic(t *testing.T) {
+	html := `<div>Dersin Program Çıktılarına Katkısı</div><table>
+	<tr><th>No</th><th>Program Çıktısı</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+	<tr><td>1</td><td>Analiz</td><td></td><td>X</td><td></td><td>X</td><td></td></tr>
+	<tr><td>2</td><td>Tasarım</td><td></td><td></td><td></td><td></td><td>✓</td></tr></table>`
+	for i := 0; i < 20; i++ { // map sırası rastgele: sonuç her seferinde aynı olmalı
+		d, _ := ParseCourseDetail(bytes.NewReader([]byte(html)))
+		if len(d.ProgramOutcomes) != 2 || *d.ProgramOutcomes[0].Level != 4 || *d.ProgramOutcomes[1].Level != 5 || d.ProgramOutcomes[0].Description != "Analiz" {
+			t.Fatalf("got %+v", d.ProgramOutcomes)
+		}
+	}
+}
+
+func TestMatrixWideLayout(t *testing.T) {
+	html := `<div>Öğrenme Çıktıları ile Program Çıktıları İlişkisi</div><table>
+	<tr><th></th><th>PÇ1</th><th>PÇ2</th><th>PÇ3</th></tr>
+	<tr><td>ÖÇ1</td><td>3</td><td></td><td>5</td></tr>
+	<tr><td>ÖÇ2</td><td>4</td><td>1</td><td></td></tr></table>`
+	d, _ := ParseCourseDetail(bytes.NewReader([]byte(html)))
+	want := []int{4, 1, 5}
+	if len(d.ProgramOutcomes) != 3 {
+		t.Fatalf("got %+v", d.ProgramOutcomes)
+	}
+	for i, oc := range d.ProgramOutcomes {
+		if oc.No != i+1 || oc.Level == nil || *oc.Level != want[i] {
+			t.Fatalf("PÇ%d: %+v", i+1, oc)
+		}
+	}
+}

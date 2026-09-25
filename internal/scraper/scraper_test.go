@@ -1,0 +1,110 @@
+package scraper
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
+)
+
+// fixtureServer, parse/testdata altındaki sayfaları sayfa adına göre sunar ve istekleri sayar.
+func fixtureServer(t *testing.T) (*httptest.Server, map[string]int, *sync.Mutex) {
+	t.Helper()
+	hits := map[string]int{}
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		hits[r.URL.Path+"?"+r.URL.Query().Get("curCourse")]++
+		mu.Unlock()
+		b, err := os.ReadFile(filepath.Join("..", "parse", "testdata", filepath.Base(r.URL.Path)))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(b)
+	}))
+	t.Cleanup(srv.Close)
+	return srv, hits, &mu
+}
+
+func TestDiscoverAndRun(t *testing.T) {
+	srv, hits, mu := fixtureServer(t)
+	c, err := fetch.New(fetch.Options{BaseURL: srv.URL + "/oibs/bologna/", Lang: "tr", RPS: 1000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 3}
+
+	refs, err := sc.Discover(context.Background(), "lisans", "lis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(refs) != 3 || refs[2].ID != 352 || refs[2].UnitID != 12 || refs[0].Level != "lisans" {
+		t.Fatalf("keşif: %+v", refs)
+	}
+
+	st := sc.Run(context.Background(), refs)
+	if st.Programs != 3 || st.Errors != 0 {
+		t.Fatalf("stats: %+v", st)
+	}
+	// 4 farklı ders (3 plan + 1 seçmeli havuz) üç programda ortak: her detay yalnızca bir kez indirilmeli.
+	if st.Courses != 4 {
+		t.Fatalf("ders detayı sayısı %d, 4 beklendi", st.Courses)
+	}
+	mu.Lock()
+	for k, n := range hits {
+		if strings.Contains(k, "progCourseDetails") && n != 1 {
+			t.Errorf("%s %d kez indirildi", k, n)
+		}
+	}
+	mu.Unlock()
+
+	kinds := map[string]int{}
+	var secmeli bool
+	sc2 := bufio.NewScanner(&out)
+	sc2.Buffer(make([]byte, 1<<20), 1<<20)
+	for sc2.Scan() {
+		var m struct {
+			Type string          `json:"type"`
+			Data json.RawMessage `json:"data"`
+		}
+		if err := json.Unmarshal(sc2.Bytes(), &m); err != nil {
+			t.Fatal(err)
+		}
+		kinds[m.Type]++
+		if m.Type == "curriculum" && strings.Contains(string(m.Data), `"course_id":100010`) && strings.Contains(string(m.Data), `"secmeli"`) {
+			secmeli = true
+		}
+	}
+	if kinds["unit"] != 3 || kinds["program"] != 3 || kinds["curriculum"] != 3 || kinds["course"] != 4 {
+		t.Fatalf("çıktı türleri: %v", kinds)
+	}
+	if !secmeli {
+		t.Fatal("seçmeli havuzdaki ders plana eklenmedi")
+	}
+}
+
+func TestCancelledRunStops(t *testing.T) {
+	srv, _, _ := fixtureServer(t)
+	c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 1000})
+	sc := &Scraper{Client: c, Sink: NewJSONSink(io.Discard), Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	refs, _ := sc.Discover(context.Background(), "lisans", "lis")
+	if st := sc.Run(ctx, refs); st.Programs != 0 {
+		t.Fatalf("iptal edilen çalışma program işledi: %+v", st)
+	}
+}
