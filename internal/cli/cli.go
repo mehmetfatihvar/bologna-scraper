@@ -226,7 +226,7 @@ func scrapeCmd() *cobra.Command {
 		workers     int
 		limit       int
 		skipDetails bool
-		skipPool    bool
+		poolDetails bool
 		freshWithin time.Duration
 		dryRun      bool
 	)
@@ -239,6 +239,7 @@ func scrapeCmd() *cobra.Command {
   bologna scrape --all --rps 1.5
   bologna scrape --from-file programlar.json      # discover --json çıktısı
   bologna scrape --all --fresh-within 24h        # kesilen taramayı sürdür
+  bologna scrape -l lisans --pool-details --rps 1 # seçmeli havuz detayları da (uzun sürer)
   bologna scrape --program 352 --dry-run | jq .   # DB'ye yazmadan JSON göster`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -247,7 +248,7 @@ func scrapeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, SkipPoolDetails: skipPool, FreshWithin: freshWithin}
+			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, PoolDetails: poolDetails, FreshWithin: freshWithin}
 
 			// Hedef programlar
 			var refs []parse.ProgramRef
@@ -337,7 +338,7 @@ func scrapeCmd() *cobra.Command {
 	fl.IntVarP(&workers, "workers", "w", 2, "paralel işlenecek program sayısı")
 	fl.IntVar(&limit, "limit", 0, "en fazla N program işle (test için)")
 	fl.BoolVar(&skipDetails, "skip-details", false, "ders detay sayfalarını atla (sadece program + ders planı)")
-	fl.BoolVar(&skipPool, "skip-pool-details", false, "seçmeli havuz derslerinin detay sayfalarını atla (plan ilişkisi yine yazılır; tam taramada istekleri ~%80 azaltır)")
+	fl.BoolVar(&poolDetails, "pool-details", false, "seçmeli havuz derslerinin detay sayfalarını da indir (varsayılan: yalnızca plan satırı; tam lisans taramasında istekleri ~6 binden ~36 bine çıkarır)")
 	fl.DurationVar(&freshWithin, "fresh-within", 0, "detayı bu süre içinde yazılmış dersleri atla (ör. 24h; kesilen taramayı sürdürmek için)")
 	fl.BoolVar(&dryRun, "dry-run", false, "veritabanına yazma; sonuçları JSON satırları olarak stdout'a bas")
 	return cmd

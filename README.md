@@ -28,7 +28,7 @@ Docker ile hepsi birden: `docker compose run --rm scraper scrape --all`
 | `bologna scrape -l lisans,onlisans -w 3` | Seviye(ler)in tümü |
 | `bologna scrape --all --rps 1.5` | Her şey |
 | `bologna scrape --all --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış ders detaylarını atlar |
-| `bologna scrape -l lisans --skip-pool-details` | Seçmeli havuz derslerinin detay sayfalarını atlar (plan ilişkisi yine yazılır) |
+| `bologna scrape -l lisans --pool-details --rps 1` | Seçmeli havuz derslerinin detay sayfalarını da indirir (varsayılan: indirmez) |
 | `bologna scrape --from-file progs.json` | `discover --json` çıktısından |
 | `bologna scrape -p 352 --dry-run \| jq` | DB'ye yazmadan JSON |
 | `bologna inspect "progCourses.aspx?curSunit=352"` | Sayfayı parser'ın gözünden gösterir |
@@ -44,10 +44,11 @@ HTTP katmanı: ASP.NET oturum çerezi saklanır, `windows-1254`/`ISO-8859-9` say
 429/5xx'te üstel geri çekilme + `Retry-After` uygulanır, 404 tekrar denenmez. Bir istek tüm denemelere
 rağmen sunucu kaynaklı başarısız olursa **tüm istekler** 30 sn durur; hata sürerse bekleme 5 dk'ya kadar katlanır.
 
-**Tam tarama hakkında:** Lisans planlarının toplamı ~36 bin ders sayfası eder; ~30 bini seçmeli havuz kopyalarıdır.
-2 istek/sn ile bu 5+ saat sürer ve sunucu uzun taramada 503 dönmeye başlayabilir. Önerilen sıra:
-önce `scrape -l lisans --skip-pool-details` (programlar, planlar, kendi dersleri), sonra ihtiyaç olursa
-`scrape -l lisans --fresh-within 48h` ile havuz detaylarını (tercihen gece, `--rps 1`) tamamlamak.
+**Seçmeli havuz dersleri:** Varsayılan taramada havuz dersleri plan satırı olarak yazılır (hangi gruba ait,
+grupta kaç ders seçilir, AKTS, saatler, öğretim şekli) ama **detay sayfaları indirilmez**. Havuzlar her programa
+kopyalanmış ortak seçmeli derslerdir: lisans planları ~38 bin satırdır, bunun ~32 bini havuz dersidir. Varsayılan
+tam lisans taraması (~6 bin ders sayfası) yaklaşık 1 saat, sonraki güncellemeler (`--fresh-within`) birkaç
+dakika sürer. Havuz detayları için `--pool-details` (~30 bin sayfa daha; tercihen gece, `--rps 1`).
 
 ## Veri modeli
 

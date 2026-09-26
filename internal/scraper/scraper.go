@@ -56,10 +56,11 @@ type Scraper struct {
 	Log         *slog.Logger
 	Workers     int
 	SkipDetails bool
-	// SkipPoolDetails: seçmeli havuz derslerinin (plan satırı yine yazılır) detay sayfalarını indirme.
-	// Havuzlar büyük ve çoğu programda aynı ortak seçmeli derslerin kopyalarıdır; tam lisans taramasında
-	// istek sayısını ~%80 azaltır.
-	SkipPoolDetails bool
+	// PoolDetails: seçmeli havuz derslerinin detay sayfalarını da indir. Varsayılan kapalı: havuz dersleri
+	// plan satırı olarak (grup ilişkisi, AKTS, saatler) yine yazılır ama detayları indirilmez. Havuzlar
+	// çoğu programda aynı ortak seçmeli derslerin kopyalarıdır; tam lisans taramasında istek sayısını
+	// ~6 binden ~36 bine çıkarırlar.
+	PoolDetails bool
 	// FreshWithin > 0 ise, detayı bu süre içinde yazılmış dersler tekrar indirilmez.
 	FreshWithin time.Duration
 	OnError     func(url string, err error)
@@ -306,7 +307,7 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		}
 		switch {
 		case e.IsGroup: // seçmeli grup satırının detay sayfası yok
-		case e.GroupID != 0 && s.SkipPoolDetails:
+		case e.GroupID != 0 && !s.PoolDetails:
 		default:
 			s.course(ctx, ref.ID, e.CourseID)
 		}

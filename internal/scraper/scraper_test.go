@@ -112,19 +112,19 @@ func TestCancelledRunStops(t *testing.T) {
 
 // Gerçek BİLGİSAYAR MÜHENDİSLİĞİ planı: 43 doğrudan ders + 285 seçmeli havuz dersi. OİBS havuz
 // derslerini her programa ayrı kopya (curCourse) olarak koyar; hepsi bu programa aittir.
-// 17 grup satırının detay sayfası yoktur. --skip-pool-details ile yalnızca 43 detay indirilir.
+// 17 grup satırının detay sayfası yoktur. Varsayılan (PoolDetails=false) yalnızca 43 detay indirir.
 func TestRealPlanDetailsAndOwnership(t *testing.T) {
 	for _, tc := range []struct {
-		skipPool    bool
+		poolDetails bool
 		wantDetails int
-	}{{false, 328}, {true, 43}} {
+	}{{true, 328}, {false, 43}} {
 		srv, hits := realSite(t)
 		c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
 		var out bytes.Buffer
-		sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2, SkipPoolDetails: tc.skipPool}
+		sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2, PoolDetails: tc.poolDetails}
 		st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
 		if st.Errors != 0 || st.Courses != int64(tc.wantDetails) || hits() != tc.wantDetails {
-			t.Fatalf("skipPool=%v stats=%+v detay isteği=%d", tc.skipPool, st, hits())
+			t.Fatalf("poolDetails=%v stats=%+v detay isteği=%d", tc.poolDetails, st, hits())
 		}
 		owners := map[int64]int{}
 		dec := json.NewDecoder(&out)
