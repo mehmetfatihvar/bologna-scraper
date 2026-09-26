@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -212,5 +213,16 @@ func TestUnitHelpTextIgnored(t *testing.T) {
 	ps, _, _ := ParseUnitSelection(bytes.NewReader([]byte(html)))
 	if len(ps) != 1 || ps[0].UnitID != 22 || ps[0].UnitName != "" {
 		t.Fatalf("got %+v", ps)
+	}
+}
+
+func TestRealOutcomesPage(t *testing.T) {
+	outs, err := ParseOutcomesPage(bytes.NewReader(fixture(t, "real/progLearnOutcomes_1371.html")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(outs) != 11 || outs[0].No != 1 || outs[10].No != 11 ||
+		!strings.HasPrefix(outs[5].Description, "Disiplin içi ve çok disiplinli takımlarda") {
+		t.Fatalf("got %d: %+v", len(outs), outs)
 	}
 }

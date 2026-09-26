@@ -1,3 +1,10 @@
 /bin/
 /cache/
 *.json.tmp
+# yerel denemeler: derlenen ikili ve inspect --save ile kaydedilen sayfalar
+/bologna
+/bologna.exe
+/*.html
+/*.json
+/ornek/
+/ornek.zip

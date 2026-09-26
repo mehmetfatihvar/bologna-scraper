@@ -99,8 +99,8 @@ make lint
 CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
 
 `internal/parse/testdata/real/` gerçek OİBS sayfalarıdır (Bilgisayar Mühendisliği, 1371; ViewState
-kırpıldı). Program bilgisi ve ders planı parser'ları bunlara karşı test edilir. Diğer fixture'lar
-sentetiktir; ders detayı ve program yeterlilikleri sayfaları henüz gerçek sayfayla doğrulanmadı.
+kırpıldı). Program bilgisi, ders planı ve program yeterlilikleri parser'ları bunlara karşı test edilir.
+Diğer fixture'lar sentetiktir; ders detayı sayfası henüz gerçek sayfayla doğrulanmadı.
 Yeni gerçek sayfa eklemek için:
 >
 > ```bash
