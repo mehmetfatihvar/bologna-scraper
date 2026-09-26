@@ -155,8 +155,24 @@ func (c *Client) cachePath(rawURL string) string {
 
 // Get, sayfayı indirir. 4xx (429 hariç) hatalarında tekrar denemez.
 func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
+	return c.fetch(ctx, rawURL, nil)
+}
+
+// Post, ASP.NET form gönderimi (postback) yapar; tekrar deneme ve bekleme kuralları Get ile aynıdır.
+func (c *Client) Post(ctx context.Context, rawURL string, form url.Values) ([]byte, error) {
+	if form == nil {
+		form = url.Values{}
+	}
+	return c.fetch(ctx, rawURL, form)
+}
+
+func (c *Client) fetch(ctx context.Context, rawURL string, form url.Values) ([]byte, error) {
+	cacheKey := rawURL
+	if form != nil {
+		cacheKey += "\nPOST " + form.Encode()
+	}
 	if c.opts.CacheDir != "" && c.opts.UseCache {
-		if b, err := os.ReadFile(c.cachePath(rawURL)); err == nil {
+		if b, err := os.ReadFile(c.cachePath(cacheKey)); err == nil {
 			return b, nil
 		}
 	}
@@ -181,7 +197,7 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 		if err := c.wait(ctx); err != nil {
 			return nil, err
 		}
-		body, status, ra, err := c.do(ctx, rawURL)
+		body, status, ra, err := c.do(ctx, rawURL, form)
 		retryAfter = ra
 		if err != nil {
 			if ctx.Err() != nil {
@@ -193,7 +209,7 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 		if status == http.StatusOK {
 			c.healthy()
 			if c.opts.CacheDir != "" {
-				_ = os.WriteFile(c.cachePath(rawURL), body, 0o644)
+				_ = os.WriteFile(c.cachePath(cacheKey), body, 0o644)
 			}
 			return body, nil
 		}
@@ -233,10 +249,18 @@ func (c *Client) healthy() {
 	c.mu.Unlock()
 }
 
-func (c *Client) do(ctx context.Context, rawURL string) ([]byte, int, time.Duration, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+func (c *Client) do(ctx context.Context, rawURL string, form url.Values) ([]byte, int, time.Duration, error) {
+	method, body := http.MethodGet, io.Reader(nil)
+	if form != nil {
+		method, body = http.MethodPost, strings.NewReader(form.Encode())
+	}
+	req, err := http.NewRequestWithContext(ctx, method, rawURL, body)
 	if err != nil {
 		return nil, 0, 0, err
+	}
+	if form != nil {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Referer", rawURL)
 	}
 	req.Header.Set("User-Agent", c.opts.UserAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
@@ -247,14 +271,14 @@ func (c *Client) do(ctx context.Context, rawURL string) ([]byte, int, time.Durat
 	}
 	defer resp.Body.Close()
 	ra := parseRetryAfter(resp.Header.Get("Retry-After"))
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 20<<20))
+	out, err := io.ReadAll(io.LimitReader(resp.Body, 20<<20))
 	if err != nil {
 		return nil, resp.StatusCode, ra, err
 	}
 	if resp.StatusCode == http.StatusOK {
-		body = toUTF8(body, resp.Header.Get("Content-Type"))
+		out = toUTF8(out, resp.Header.Get("Content-Type"))
 	}
-	return body, resp.StatusCode, ra, nil
+	return out, resp.StatusCode, ra, nil
 }
 
 // toUTF8, sayfayı (Content-Type / <meta charset> / içerik tahmini ile) UTF-8'e çevirir.

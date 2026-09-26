@@ -381,6 +381,7 @@ func inspectCmd() *cobra.Command {
 		as     string
 		rows   int
 		saveTo string
+		year   string
 	)
 	cmd := &cobra.Command{
 		Use:   "inspect <url | dosya.html | sayfa.aspx?param=..>",
@@ -393,9 +394,17 @@ func inspectCmd() *cobra.Command {
   bologna inspect sayfa.html --as about`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			body, err := readSource(cmd.Context(), args[0])
+			body, c, err := readSource(cmd.Context(), args[0])
 			if err != nil {
 				return err
+			}
+			if year != "" {
+				if c == nil {
+					return errors.New("--year yalnızca siteden indirilen sayfada çalışır (dosyada değil)")
+				}
+				if body, err = selectYear(cmd.Context(), c, args[0], body, year); err != nil {
+					return err
+				}
 			}
 			if saveTo != "" {
 				if err := os.WriteFile(saveTo, body, 0o644); err != nil {
@@ -438,23 +447,55 @@ func inspectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&as, "as", "tables", "tables|about|outcomes|curriculum|course|units")
 	cmd.Flags().IntVar(&rows, "rows", 6, "tables modunda tablo başına gösterilecek satır")
 	cmd.Flags().StringVar(&saveTo, "save", "", "ham HTML'i bu dosyaya da kaydet")
+	cmd.Flags().StringVar(&year, "year", "", "ders planı sayfasında bu yılı seç (ör. 2025), sonra göster")
 	return cmd
 }
 
-func readSource(ctx context.Context, src string) ([]byte, error) {
+// selectYear, indirilmiş ders planı sayfasında yıl seçiciyi değiştirip yeni sayfayı döndürür.
+func selectYear(ctx context.Context, c *fetch.Client, src string, page []byte, want string) ([]byte, error) {
+	cur, err := parse.ParseCurriculum(page)
+	if err != nil {
+		return nil, err
+	}
+	py, ok := scraper.FindPlanYear(cur.Years, want)
+	if !ok {
+		var have []string
+		for _, y := range cur.Years {
+			have = append(have, strconv.Itoa(y.Year))
+		}
+		return nil, fmt.Errorf("sayfada %q yılı yok (mevcut: %s)", want, strings.Join(have, ", "))
+	}
+	u := src
+	if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
+		u = c.Resolve(src)
+	}
+	fmt.Fprintln(os.Stderr, "POST", u, parse.YearField+"="+py.Value, "("+py.Label+")")
+	out, err := scraper.YearPostback(ctx, c, u, page, py.Value)
+	if err != nil {
+		return nil, err
+	}
+	if got, err := parse.ParseCurriculum(out); err == nil && got.Year != nil {
+		fmt.Fprintf(os.Stderr, "dönen sayfadaki seçili yıl: %d, ders satırı: %d\n", *got.Year, len(got.Entries))
+	}
+	return out, nil
+}
+
+func readSource(ctx context.Context, src string) ([]byte, *fetch.Client, error) {
 	if _, err := os.Stat(src); err == nil {
-		return os.ReadFile(src)
+		b, err := os.ReadFile(src)
+		return b, nil, err
 	}
 	c, err := client()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	u := src
 	if !strings.HasPrefix(src, "http://") && !strings.HasPrefix(src, "https://") {
 		u = c.Resolve(src)
 	}
 	fmt.Fprintln(os.Stderr, "GET", u)
-	return c.Get(ctx, u)
+	b, err := c.Get(ctx, u)
+	return b, c, err
 }
 
 // ---------------- stats ----------------

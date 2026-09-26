@@ -38,6 +38,8 @@ type Curriculum struct {
 	UnitName    string `json:"unit_name,omitempty"`
 	ProgramName string `json:"program_name,omitempty"`
 	Year        *int   `json:"year,omitempty"` // seçili ders planı yılı (cmbYillar)
+	// Years: sayfadaki yıl seçicisinin (cmbYillar) tüm seçenekleri; eski planlar bunlarla istenir.
+	Years []PlanYear `json:"years,omitempty"`
 	// Links: ders planı tablolarındaki, ders detayı olmayan alt sayfa linkleri
 	// (ör. seçmeli ders havuzları). Scraper bunları bir seviye takip eder.
 	Links []string `json:"links,omitempty"`
@@ -205,6 +207,14 @@ func ParseCurriculum(body []byte) (*Curriculum, error) {
 	return cur, nil
 }
 
+// PlanYear, ders planı yıl seçicisinin bir seçeneği ("2025 (2025 - BİLGİSAYAR MÜHENDİSLİĞİ)").
+type PlanYear struct {
+	Value    string `json:"value"` // form değeri (sitenin plan kimliği)
+	Year     int    `json:"year"`
+	Label    string `json:"label"`
+	Selected bool   `json:"selected,omitempty"`
+}
+
 // parseCurriculumHeader, "FAKÜLTE / PROGRAM - Dersler" başlığını ve seçili plan yılını okur.
 func parseCurriculumHeader(doc *html.Node, cur *Curriculum) {
 	walkNodes(doc, func(n *html.Node) bool {
@@ -218,6 +228,25 @@ func parseCurriculumHeader(doc *html.Node, cur *Curriculum) {
 				cur.UnitName, cur.ProgramName = Clean(unit), Clean(prog)
 			} else {
 				cur.ProgramName = h
+			}
+			return false
+		case n.DataAtom == atom.Select && strings.EqualFold(attr(n, "name"), YearField):
+			for o := n.FirstChild; o != nil; o = o.NextSibling {
+				if o.Type != html.ElementNode || o.DataAtom != atom.Option {
+					continue
+				}
+				py := PlanYear{Value: attr(o, "value"), Label: Clean(textOf(o)), Selected: hasAttr(o, "selected")}
+				if y := Int(py.Label); y != nil && *y > 1900 {
+					py.Year = *y
+				}
+				if py.Value == "" || py.Year == 0 {
+					continue
+				}
+				cur.Years = append(cur.Years, py)
+				if py.Selected {
+					y := py.Year
+					cur.Year = &y
+				}
 			}
 			return false
 		case n.DataAtom == atom.Option && attr(n, "selected") != "" && cur.Year == nil:
