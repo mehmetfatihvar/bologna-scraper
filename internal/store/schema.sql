@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS units (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE units ADD COLUMN IF NOT EXISTS levels TEXT[] NOT NULL DEFAULT '{}';  -- eski şemadan geçiş
+-- facAbout.aspx tanıtım metni (paragraflar satır sonuyla ayrılır)
+ALTER TABLE units ADD COLUMN IF NOT EXISTS about TEXT;
+ALTER TABLE units ADD COLUMN IF NOT EXISTS about_scraped_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS programs (
     id                  BIGINT PRIMARY KEY,      -- curSunit
@@ -106,6 +109,12 @@ ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS is_elective_group BOOLEAN N
 ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS group_course_count INT;
 ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS elective_group_id BIGINT;
 CREATE INDEX IF NOT EXISTS program_courses_course_idx ON program_courses(course_id);
+-- Ders planı yılı. OİBS her yılın planına ayrı ders ID'leri verir; programs.curriculum_year güncel yıldır,
+-- daha eski yıllar (--years) aynı tabloda kendi plan_year değeriyle durur.
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS plan_year INT;
+UPDATE program_courses pc SET plan_year = p.curriculum_year
+FROM programs p WHERE pc.program_id = p.id AND pc.plan_year IS NULL AND p.curriculum_year IS NOT NULL;
+CREATE INDEX IF NOT EXISTS program_courses_year_idx ON program_courses(program_id, plan_year);
 CREATE INDEX IF NOT EXISTS program_courses_group_idx ON program_courses(program_id, elective_group_id);
 
 CREATE TABLE IF NOT EXISTS course_learning_outcomes (
@@ -215,7 +224,8 @@ SELECT u.name AS unit_name, p.id AS program_id, p.name AS program_name, p.level,
        pc.course_type, c.theory_hours, c.practice_hours, c.credit, c.ects,
        -- yeni sütunlar sona eklenir (CREATE OR REPLACE VIEW sütun sırasını değiştiremez)
        c.lab_hours, pc.delivery_mode, pc.is_elective_group, pc.group_course_count,
-       pc.elective_group_id, g.code AS elective_group_code, g.name AS elective_group_name
+       pc.elective_group_id, g.code AS elective_group_code, g.name AS elective_group_name,
+       pc.plan_year, (pc.plan_year IS NOT DISTINCT FROM p.curriculum_year) AS is_current
 FROM program_courses pc
 JOIN programs p ON p.id = pc.program_id
 JOIN courses c  ON c.id = pc.course_id

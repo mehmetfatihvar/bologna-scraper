@@ -232,6 +232,7 @@ func realSite(t *testing.T) (*httptest.Server, func() int) {
 		"/progLearnOutcomes.aspx": "progLearnOutcomes_1371.html",
 		"/progCourses.aspx":       "progCourses_1371.html",
 		"/progCourseDetails.aspx": "progCourseDetails_1098805.html",
+		"/facAbout.aspx":          "facAbout_22.html",
 	}
 	var mu sync.Mutex
 	detailHits := 0
@@ -246,6 +247,9 @@ func realSite(t *testing.T) (*httptest.Server, func() int) {
 			detailHits++
 			mu.Unlock()
 		}
+		if r.Method == http.MethodPost && r.URL.Path == "/progCourses.aspx" && r.FormValue("cmbYillar") == "16638" {
+			f = "progCourses_1371_2025.html" // yıl seçici postback'i: 2025 planı
+		}
 		b, _ := os.ReadFile(filepath.Join(real, f))
 		if r.URL.Query().Get("curSunit") == "2371" {
 			// ikinci program: aynı plan, farklı ders ID'leri (OİBS havuz kopyaları gibi)
@@ -255,4 +259,61 @@ func realSite(t *testing.T) (*httptest.Server, func() int) {
 	}))
 	t.Cleanup(srv.Close)
 	return srv, func() int { mu.Lock(); defer mu.Unlock(); return detailHits }
+}
+
+// Eski plan yılları: 2025 postback ile alınır ve arşiv olarak yazılır; birim tanıtımı bir kez indirilir.
+func TestPlanYears(t *testing.T) {
+	b, _ := os.ReadFile(filepath.Join("..", "parse", "testdata", "real", "progCourses_1371_2025.html"))
+	old, err := parse.ParseCurriculum(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	direct2025 := 0
+	for _, e := range old.Entries {
+		if !e.IsGroup && e.GroupID == 0 {
+			direct2025++
+		}
+	}
+	for _, tc := range []struct {
+		years, wantErr int
+	}{{2, 0}, {-1, 1}} { // -1: 2024 de istenir; test sunucusu onu vermez → "yıl seçilemedi"
+		srv, hits := realSite(t)
+		c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
+		var out bytes.Buffer
+		sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2, PlanYears: tc.years}
+		st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
+		if st.Errors != int64(tc.wantErr) || st.Programs != 1 || hits() != 43+direct2025 {
+			t.Fatalf("years=%d stats=%+v detay=%d beklenen=%d", tc.years, st, hits(), 43+direct2025)
+		}
+		var plans []string
+		abouts := 0
+		dec := json.NewDecoder(&out)
+		for dec.More() {
+			var m struct {
+				Type string `json:"type"`
+				Data struct {
+					Curriculum struct {
+						Year     int  `json:"year"`
+						Archived bool `json:"archived"`
+					} `json:"curriculum"`
+					About parse.UnitAbout `json:"about"`
+				} `json:"data"`
+			}
+			if err := dec.Decode(&m); err != nil {
+				t.Fatal(err)
+			}
+			switch m.Type {
+			case "curriculum":
+				plans = append(plans, fmt.Sprint(m.Data.Curriculum.Year, m.Data.Curriculum.Archived))
+			case "unit_about":
+				abouts++
+				if m.Data.About.Name != "MÜHENDİSLİK FAKÜLTESİ" {
+					t.Fatalf("birim: %+v", m.Data.About)
+				}
+			}
+		}
+		if strings.Join(plans, ",") != "2026 false,2025 true" || abouts != 1 {
+			t.Fatalf("planlar=%v tanıtım=%d", plans, abouts)
+		}
+	}
 }

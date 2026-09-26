@@ -24,3 +24,16 @@ func TestLevelList(t *testing.T) {
 		t.Fatal(l)
 	}
 }
+
+func TestParseYears(t *testing.T) {
+	for in, want := range map[string]int{"1": 1, "3": 3, "all": -1, "ALL": -1} {
+		if got, err := parseYears(in); err != nil || got != want {
+			t.Fatalf("%q -> %d, %v", in, got, err)
+		}
+	}
+	for _, bad := range []string{"0", "-2", "x", ""} {
+		if _, err := parseYears(bad); err == nil {
+			t.Fatalf("%q kabul edildi", bad)
+		}
+	}
+}

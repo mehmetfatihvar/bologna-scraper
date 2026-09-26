@@ -227,6 +227,7 @@ func scrapeCmd() *cobra.Command {
 		limit       int
 		skipDetails bool
 		poolDetails string
+		years       string
 		freshWithin time.Duration
 		dryRun      bool
 	)
@@ -241,6 +242,7 @@ func scrapeCmd() *cobra.Command {
   bologna scrape --all --fresh-within 24h        # kesilen taramayı sürdür
   bologna scrape -l lisans --pool-details         # havuz detayları: her ders kodu bir kez
   bologna scrape -l lisans --pool-details=all     # havuz detayları: her kopya ayrı (çok uzun)
+  bologna scrape --all --pool-details --years all  # eski yılların planları da (süre yıl sayısıyla katlanır)
   bologna scrape --program 352 --dry-run | jq .   # DB'ye yazmadan JSON göster`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -254,7 +256,12 @@ func scrapeCmd() *cobra.Command {
 			default:
 				return fmt.Errorf("--pool-details %q: shared veya all olmalı", poolDetails)
 			}
-			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, PoolDetails: poolDetails, FreshWithin: freshWithin}
+			planYears, err := parseYears(years)
+			if err != nil {
+				return err
+			}
+			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, PoolDetails: poolDetails,
+				PlanYears: planYears, FreshWithin: freshWithin}
 
 			// Hedef programlar
 			var refs []parse.ProgramRef
@@ -346,6 +353,7 @@ func scrapeCmd() *cobra.Command {
 	fl.BoolVar(&skipDetails, "skip-details", false, "ders detay sayfalarını atla (sadece program + ders planı)")
 	fl.StringVar(&poolDetails, "pool-details", "", "seçmeli havuz derslerinin detay sayfaları: boş = indirme, shared = her ders kodu bir kez (~4,6 bin istek; kopyalara içerik yazılır, matris yazılmaz), all = her kopya ayrı (~30 bin istek)")
 	fl.Lookup("pool-details").NoOptDefVal = scraper.PoolShared
+	fl.StringVar(&years, "years", "1", "ders planı yılı sayısı: 1 = yalnızca güncel plan, N = güncel + N-1 eski plan, all = sitedeki tüm yıllar")
 	fl.DurationVar(&freshWithin, "fresh-within", 0, "detayı bu süre içinde yazılmış dersleri atla (ör. 24h; kesilen taramayı sürdürmek için)")
 	fl.BoolVar(&dryRun, "dry-run", false, "veritabanına yazma; sonuçları JSON satırları olarak stdout'a bas")
 	return cmd
@@ -449,6 +457,18 @@ func inspectCmd() *cobra.Command {
 	cmd.Flags().StringVar(&saveTo, "save", "", "ham HTML'i bu dosyaya da kaydet")
 	cmd.Flags().StringVar(&year, "year", "", "ders planı sayfasında bu yılı seç (ör. 2025), sonra göster")
 	return cmd
+}
+
+// parseYears, --years değerini Scraper.PlanYears'a çevirir: "all" → -1.
+func parseYears(v string) (int, error) {
+	if strings.EqualFold(v, "all") {
+		return -1, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 1 {
+		return 0, fmt.Errorf("--years %q: 1, 2, 3… veya all olmalı", v)
+	}
+	return n, nil
 }
 
 // selectYear, indirilmiş ders planı sayfasında yıl seçiciyi değiştirip yeni sayfayı döndürür.

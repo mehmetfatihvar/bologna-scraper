@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/url"
@@ -27,6 +28,7 @@ const (
 	PageProgramOutcome = "progLearnOutcomes.aspx" // ?curSunit=   (yoksa 404 -> sorun değil)
 	PageCurriculum     = "progCourses.aspx"       // ?curSunit=
 	PageCourseDetail   = "progCourseDetails.aspx" // ?curCourse=
+	PageUnitAbout      = "facAbout.aspx"          // ?curUnit=
 )
 
 // LevelTypes: CLI seviye adı -> unitSelection.aspx "type" parametresi.
@@ -40,6 +42,7 @@ var LevelTypes = map[string]string{
 // Sink, sonuçların yazılacağı hedef (PostgreSQL veya JSON çıktı).
 type Sink interface {
 	Unit(ctx context.Context, id int64, name, level string) error
+	UnitAbout(ctx context.Context, id int64, a *parse.UnitAbout) error
 	Program(ctx context.Context, ref parse.ProgramRef, p *parse.Program, url string) error
 	ProgramOutcomes(ctx context.Context, programID int64, outs []parse.Outcome, source string) error
 	Curriculum(ctx context.Context, programID int64, cur *parse.Curriculum) error
@@ -76,6 +79,10 @@ type Scraper struct {
 	//                          hariç — o sayfadaki PÇ'ler kaynak programındır) detail_source_id ile yazılır.
 	//   PoolAll    ("all"):    her kopya ayrı indirilir (programa özel matrisler dahil, ~30 bin istek).
 	PoolDetails string
+	// PlanYears: taranacak ders planı yılı sayısı. 0 veya 1: yalnızca sitede seçili (güncel) plan;
+	// N > 1: güncel + en yeni N-1 eski plan; < 0: sayfadaki tüm yıllar. Eski planların ders ID'leri ayrıdır,
+	// detayları da ayrıca indirilir (süre yıl sayısıyla katlanır).
+	PlanYears int
 	// FreshWithin > 0 ise, detayı bu süre içinde yazılmış dersler tekrar indirilmez.
 	FreshWithin time.Duration
 	OnError     func(url string, err error)
@@ -83,6 +90,7 @@ type Scraper struct {
 	programs, courses, skipped, errors atomic.Int64
 	done                               atomic.Int64 // biten program (başarılı/başarısız)
 	courseSeen                         sync.Map     // curCourse -> struct{}: aynı çalışmada bir kez indir
+	unitSeen                           sync.Map     // curUnit -> struct{}: tanıtım sayfası bir kez
 	poolMu                             sync.Mutex
 	pools                              map[string][]poolCopy // PoolShared: ders kodu -> kopyalar
 }
@@ -221,10 +229,13 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 	log := s.Log.With("program", ref.ID)
 	q := url.Values{"curSunit": {id(ref.ID)}}
 
-	// 1) Birim
+	// 1) Birim (+ tanıtım sayfası, birim başına bir kez)
 	if ref.UnitID != 0 {
 		if err := s.Sink.Unit(ctx, ref.UnitID, ref.UnitName, ref.Level); err != nil {
 			s.fail("unit:"+id(ref.UnitID), err)
+		}
+		if _, dup := s.unitSeen.LoadOrStore(ref.UnitID, struct{}{}); !dup {
+			s.unitAbout(ctx, ref.UnitID)
 		}
 	}
 
@@ -265,7 +276,7 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		log.Debug("yeterlilik sayfası alınamadı", "err", err)
 	}
 
-	// 4) Ders planı (+ seçmeli havuzları, bir seviye)
+	// 4) Ders planı: sitede seçili (güncel) yıl, sonra istenen eski yıllar (yıl seçici postback'i ile)
 	curURL := s.Client.URL(PageCurriculum, q)
 	body, err := s.Client.Get(ctx, curURL)
 	if err != nil {
@@ -277,6 +288,81 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		s.fail(curURL, err)
 		return
 	}
+	// Birim adı keşif sayfasında güvenilir değil; ders planı başlığı ("FAKÜLTE / PROGRAM - Dersler") kesin kaynak.
+	if ref.UnitID != 0 && cur.UnitName != "" && cur.UnitName != ref.UnitName {
+		if err := s.Sink.Unit(ctx, ref.UnitID, cur.UnitName, ref.Level); err != nil {
+			s.fail("unit:"+id(ref.UnitID), err)
+		}
+	}
+	if !s.plan(ctx, ref, cur, curURL, log) {
+		return
+	}
+	s.programs.Add(1)
+	for _, py := range s.olderYears(cur) {
+		if ctx.Err() != nil {
+			return
+		}
+		yu := curURL + "#" + strconv.Itoa(py.Year)
+		b, err := YearPostback(ctx, s.Client, curURL, body, py.Value)
+		if err != nil {
+			s.fail(yu, err)
+			continue
+		}
+		old, err := parse.ParseCurriculum(b)
+		if err != nil {
+			s.fail(yu, err)
+			continue
+		}
+		if old.Year == nil || *old.Year != py.Year {
+			s.fail(yu, fmt.Errorf("yıl seçilemedi: %d istendi, sayfa %v döndü", py.Year, old.Year))
+			continue
+		}
+		old.Archived = true
+		s.plan(ctx, ref, old, yu, log)
+	}
+}
+
+// olderYears, PlanYears ayarına göre taranacak eski plan yıllarını (yeniden eskiye) döndürür.
+func (s *Scraper) olderYears(cur *parse.Curriculum) []parse.PlanYear {
+	if s.PlanYears >= 0 && s.PlanYears <= 1 {
+		return nil
+	}
+	var old []parse.PlanYear
+	for _, y := range cur.Years {
+		if !y.Selected && (cur.Year == nil || y.Year != *cur.Year) {
+			old = append(old, y)
+		}
+	}
+	slices.SortFunc(old, func(a, b parse.PlanYear) int { return cmp.Compare(b.Year, a.Year) })
+	if s.PlanYears > 1 && len(old) > s.PlanYears-1 {
+		old = old[:s.PlanYears-1]
+	}
+	return old
+}
+
+// unitAbout, birimin tanıtım sayfasını (facAbout.aspx) indirip yazar.
+func (s *Scraper) unitAbout(ctx context.Context, unitID int64) {
+	u := s.Client.URL(PageUnitAbout, url.Values{"curUnit": {id(unitID)}})
+	b, err := s.Client.Get(ctx, u)
+	if err != nil {
+		if !fetch.IsNotFound(err) {
+			s.fail(u, err)
+		}
+		return
+	}
+	a, err := parse.ParseUnitAbout(b)
+	if err != nil {
+		s.fail(u, err)
+		return
+	}
+	if err := s.Sink.UnitAbout(ctx, unitID, a); err != nil {
+		s.fail(u, err)
+	}
+}
+
+// plan, bir yılın ders planını (seçmeli alt sayfalarıyla) yazar ve derslerin detaylarını indirir.
+// Plan yazılamadıysa false döner.
+func (s *Scraper) plan(ctx context.Context, ref parse.ProgramRef, cur *parse.Curriculum, curURL string, log *slog.Logger) bool {
 	entries := cur.Entries
 	have := map[int64]bool{}
 	for _, e := range entries {
@@ -305,38 +391,36 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		}
 	}
 	cur.Entries = entries
-	// Birim adı keşif sayfasında güvenilir değil; ders planı başlığı ("FAKÜLTE / PROGRAM - Dersler") kesin kaynak.
-	if ref.UnitID != 0 && cur.UnitName != "" && cur.UnitName != ref.UnitName {
-		if err := s.Sink.Unit(ctx, ref.UnitID, cur.UnitName, ref.Level); err != nil {
-			s.fail("unit:"+id(ref.UnitID), err)
-		}
-	}
 	if err := s.Sink.Curriculum(ctx, ref.ID, cur); err != nil {
 		s.fail(curURL, err)
-		return
+		return false
 	}
-	s.programs.Add(1)
-	log.Info("ders planı", "ders", len(entries))
+	year := 0
+	if cur.Year != nil {
+		year = *cur.Year
+	}
+	log.Info("ders planı", "yıl", year, "ders", len(entries))
 
 	if s.SkipDetails {
-		return
+		return true
 	}
 
 	// 5) Ders detayları. Seçmeli havuz dersleri de bu programa aittir: OİBS her programın planına
 	// kendi kopyasını (ayrı curCourse) koyar ve sayfadaki P1…Pn bu programın çıktılarıdır.
 	for _, e := range entries {
 		if ctx.Err() != nil {
-			return
+			return true
 		}
 		switch {
 		case e.IsGroup: // seçmeli grup satırının detay sayfası yok
 		case e.GroupID != 0 && s.PoolDetails == PoolShared:
-			s.addPoolCopy(e, ref.ID) // tüm programların planları okununca kod başına bir kez indirilir
+			s.addPoolCopy(e, year, ref.ID) // tüm programların planları okununca kod başına bir kez indirilir
 		case e.GroupID != 0 && s.PoolDetails != PoolAll:
 		default:
 			s.course(ctx, ref.ID, e.CourseID)
 		}
 	}
+	return true
 }
 
 // course, ders detayını bir çalışmada en fazla bir kez indirip yazar.
@@ -369,9 +453,10 @@ func (s *Scraper) course(ctx context.Context, ownerID, courseID int64) {
 	s.Log.Debug("ders", "id", courseID, "sahip", ownerID, "kod", d.Code, "ad", d.Name)
 }
 
-func (s *Scraper) addPoolCopy(e parse.CurriculumEntry, programID int64) {
-	key := e.Code
-	if key == "" { // kodsuz satır başka kopyalarla eşleştirilemez
+// addPoolCopy: kopyalar ders kodu ve plan yılıyla eşleştirilir (farklı yılların içeriği farklı olabilir).
+func (s *Scraper) addPoolCopy(e parse.CurriculumEntry, year int, programID int64) {
+	key := strconv.Itoa(year) + "|" + e.Code
+	if e.Code == "" { // kodsuz satır başka kopyalarla eşleştirilemez
 		key = "id:" + id(e.CourseID)
 	}
 	s.poolMu.Lock()
@@ -501,6 +586,9 @@ func (j *JSONSink) emit(kind string, v any) error {
 
 func (j *JSONSink) Unit(_ context.Context, id int64, name, level string) error {
 	return j.emit("unit", map[string]any{"id": id, "name": name, "level": level})
+}
+func (j *JSONSink) UnitAbout(_ context.Context, id int64, a *parse.UnitAbout) error {
+	return j.emit("unit_about", map[string]any{"id": id, "about": a})
 }
 func (j *JSONSink) Program(_ context.Context, ref parse.ProgramRef, p *parse.Program, u string) error {
 	return j.emit("program", map[string]any{"ref": ref, "program": p, "url": u})

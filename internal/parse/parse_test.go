@@ -330,3 +330,46 @@ func TestRealUnitSelection(t *testing.T) {
 		t.Fatalf("birimler (%d): %v", len(us), names)
 	}
 }
+
+func TestRealUnitAbout(t *testing.T) {
+	read := func(f string) *UnitAbout {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join("testdata", "real", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		a, err := ParseUnitAbout(b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	a := read("facAbout_22.html")
+	if a.Name != "MÜHENDİSLİK FAKÜLTESİ" || !strings.HasPrefix(a.About, "Mühendislik Fakültesi 3 Temmuz 1992") || strings.Count(a.About, "\n") != 4 {
+		t.Fatalf("fakülte: %q\n%s", a.Name, a.About)
+	}
+	if a := read("facAbout_2.html"); a.Name != "FEN BİLİMLERİ ENSTİTÜSÜ" || !strings.Contains(a.About, "lisansüstü öğretim") {
+		t.Fatalf("enstitü: %+v", a)
+	}
+	if a := read("facAbout_empty.html"); a.Name != "" || a.About != "" {
+		t.Fatalf("tanımsız birim: %+v", a)
+	}
+}
+
+// Yıl seçiciyle istenen eski plan: farklı kod biçimi (155-1007) ve ayrı ders ID'leri.
+func TestRealCurriculum2025(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "real", "progCourses_1371_2025.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur, err := ParseCurriculum(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cur.Year == nil || *cur.Year != 2025 || len(cur.Entries) != 332 || len(cur.Years) != 3 || cur.Years[0].Selected {
+		t.Fatalf("yıl=%v satır=%d yıllar=%+v", cur.Year, len(cur.Entries), cur.Years)
+	}
+	if e := cur.Entries[0]; e.Code != "155-1007" || e.Semester != 1 || e.CourseID == 0 {
+		t.Fatalf("ilk satır: %+v", e)
+	}
+}

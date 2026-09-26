@@ -153,6 +153,30 @@ func TestStoreRoundTrip(t *testing.T) {
 	if n := st.count(t, `SELECT count(*) FROM courses WHERE id IN (91, 94) AND detail_empty`); n != 0 {
 		t.Fatal("dolu ders boş işaretlendi")
 	}
+	// Eski plan yılı: arşiv planı güncel yılı değiştirmez; güncel plan yeniden yazılınca eski yıl silinmez.
+	y2025 := 2025
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &y2025, Archived: true, Entries: []parse.CurriculumEntry{
+		{CourseID: 200, Semester: 1, Code: "155-1007", Name: "ESKİ PLAN DERSİ"},
+	}}))
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &year, Entries: []parse.CurriculumEntry{
+		{CourseID: 10, Semester: 1, Type: "zorunlu"},
+		{CourseID: 90, Semester: 5, Code: "1555S01", Name: "TEKNİK SEÇMELİ DERS", Type: "secmeli", IsGroup: true, GroupCount: ip(2)},
+		{CourseID: 91, Semester: 5, Code: "1555101", Name: "YAPAY ZEKA", Type: "secmeli", GroupID: 90},
+	}}))
+	if n := st.count(t, `SELECT count(*) FROM programs WHERE id = 1 AND curriculum_year = 2026`); n != 1 {
+		t.Fatal("arşiv planı güncel yılı değiştirdi")
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE program_id = 1 AND course_id = 200 AND plan_year = 2025 AND NOT is_current`); n != 1 {
+		t.Fatal("eski yıl planı silindi ya da güncel sayıldı")
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE program_id = 1 AND is_current`); n != 3 {
+		t.Fatalf("güncel plan: %d", n)
+	}
+	// Birim tanıtımı; boş ad mevcut adı silmez.
+	must(t, st.UnitAbout(ctx, 7, &parse.UnitAbout{About: "Tanıtım\nİkinci paragraf"}))
+	if n := st.count(t, `SELECT count(*) FROM units WHERE id = 7 AND name = 'FEN BİLİMLERİ ENSTİTÜSÜ' AND about LIKE 'Tanıtım%' AND about_scraped_at IS NOT NULL`); n != 1 {
+		t.Fatal("birim tanıtımı")
+	}
 	// Sahibi bilinmeden yazılmış ders: içerik yazılır, katkısı bağlanmaz ve taze sayılmaz (yeniden indirilir).
 	must(t, st.Course(ctx, 0, 92, &parse.CourseDetail{Name: "SAHİPSİZ", Details: map[string]string{},
 		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},

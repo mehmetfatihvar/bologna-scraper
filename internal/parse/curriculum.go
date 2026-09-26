@@ -40,6 +40,9 @@ type Curriculum struct {
 	Year        *int   `json:"year,omitempty"` // seçili ders planı yılı (cmbYillar)
 	// Years: sayfadaki yıl seçicisinin (cmbYillar) tüm seçenekleri; eski planlar bunlarla istenir.
 	Years []PlanYear `json:"years,omitempty"`
+	// Archived: bu, sitede varsayılan olarak seçili olmayan eski bir plan (scraper doldurur);
+	// programın güncel plan yılı bununla değişmez.
+	Archived bool `json:"archived,omitempty"`
 	// Links: ders planı tablolarındaki, ders detayı olmayan alt sayfa linkleri
 	// (ör. seçmeli ders havuzları). Scraper bunları bir seviye takip eder.
 	Links []string `json:"links,omitempty"`
