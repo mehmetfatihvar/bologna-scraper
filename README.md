@@ -1,138 +1,338 @@
 # bologna-scraper
 
-Mersin Üniversitesi OİBS Bologna Bilgi Paketi'ni (`obs.mersin.edu.tr/oibs/bologna`) tarayıp
-ilişkileri koruyarak PostgreSQL'e yazan Go CLI.
+Mersin Üniversitesi **OİBS Bologna Bilgi Paketi**'ni
+([obs.mersin.edu.tr/oibs/bologna](https://obs.mersin.edu.tr/oibs/bologna/index.aspx)) tarayan ve
+tüm veriyi **ilişkileri koruyarak PostgreSQL'e** yazan bir Go komut satırı aracı (CLI).
 
-## Kurulum
+Taranan veriler:
+
+- **Birimler:** fakülte, yüksekokul, MYO ve enstitüler, tanıtım metinleriyle birlikte.
+- **Programlar:** önlisans, lisans, yüksek lisans ve doktora. Program bilgileri, kabul ve mezuniyet koşulları, istihdam vb.
+- **Program çıktıları** (program yeterlilikleri).
+- **Ders planları:** yarıyıl, zorunlu/seçmeli, AKTS, T+U+L ve öğretim şekli. Seçmeli grup → havuz dersi ilişkisi dahil. Sitedeki **eski yılların planları** da istenirse alınır.
+- **Ders detayları:**
+  - amaç, içerik, dil, düzey, koordinatör, öğretim elemanları
+  - öğrenme çıktıları, haftalık konular, kaynaklar
+  - değerlendirme ve AKTS iş yükü
+  - **öğrenme çıktısı × program çıktısı katkı matrisi**
+
+Sitenin tamamı 2026-09'da taranarak doğrulandı: 4 seviye, 442 program, 50.576 ders ve 0 hata.
+Ayrıntılar aşağıdaki [Tam tarama](#6-tam-tarama-süre-ve-sonuçlar) bölümünde.
+
+---
+
+## İçindekiler
+
+1. [Hızlı başlangıç: Docker](#1-hızlı-başlangıç-docker)
+2. [Kurulum: Windows](#2-kurulum-windows)
+3. [Kurulum: Linux / macOS](#3-kurulum-linux--macos)
+4. [Kullanım](#4-kullanım)
+5. [Veri modeli ve örnek sorgular](#5-veri-modeli-ve-örnek-sorgular)
+6. [Tam tarama: süre ve sonuçlar](#6-tam-tarama-süre-ve-sonuçlar)
+7. [Sitenin özellikleri ve tasarım kararları](#7-sitenin-özellikleri-ve-tasarım-kararları)
+8. [Geliştirme ve testler](#8-geliştirme-ve-testler)
+9. [Bilinen sınırlar](#9-bilinen-sınırlar)
+
+---
+
+## 1. Hızlı başlangıç: Docker
+
+En kolay yol budur. Yalnızca [Docker Desktop](https://www.docker.com/products/docker-desktop/) gerekir;
+Go veya PostgreSQL kurmanıza gerek yoktur.
 
 ```bash
-# Go 1.22+
-go install github.com/mehmetfatihvar/staj/staj/bologna-scraper/cmd/bologna@latest
-# veya repo içinden:
-make db                     # docker ile PostgreSQL 16 (isteğe bağlı)
-make build                  # bin/bologna
-export BOLOGNA_DB_URL="postgres://bologna:bologna@localhost:5432/bologna?sslmode=disable"
-bin/bologna migrate
+git clone https://github.com/mehmetfatihvar/staj.git
+cd staj/staj/bologna-scraper
+
+# 1) PostgreSQL'i başlat (arka planda çalışır, veriler "pgdata" volume'unda kalır)
+docker compose up -d db
+
+# 2) Tek bir programla dene (~1 dk): Bilgisayar Mühendisliği
+docker compose --profile scrape run --rm scraper scrape -p 1371
+
+# 3) Tüm siteyi tara (~3,5 saat, bkz. "Tam tarama")
+docker compose --profile scrape run --rm scraper scrape --all --pool-details
+
+# 4) Sonuçlar
+docker compose --profile scrape run --rm scraper stats
+docker compose exec db psql -U bologna -d bologna      # SQL ile sorgula (\q ile çık)
 ```
 
-Docker ile hepsi birden: `docker compose run --rm scraper scrape --all`
+Veritabanı bağlantısı: `postgres://bologna:bologna@localhost:5432/bologna`. DBeaver veya pgAdmin gibi bir araçla da
+bağlanabilirsiniz. Bilgisayarınızda 5432 portunu kullanan başka bir PostgreSQL varsa `docker-compose.yml`
+içindeki `"5432:5432"` satırını `"5433:5432"` yapın.
 
-## Komutlar
+Kapatmak için: `docker compose down`. Verileri de silmek için: `docker compose down -v`.
+
+---
+
+## 2. Kurulum: Windows
+
+### 2.1 Gerekenler
+
+| Yazılım | İndirme | Not |
+|---|---|---|
+| Git | https://git-scm.com/download/win | |
+| Go 1.22+ | https://go.dev/dl/ | Kurulumdan sonra **yeni** bir cmd açın, `go version` çalışmalı |
+| PostgreSQL 16+ | https://www.postgresql.org/download/windows/ | Kurulumda `postgres` kullanıcısına bir şifre verin |
+
+### 2.2 Derleme
+
+```bat
+git clone https://github.com/mehmetfatihvar/staj.git
+cd staj\staj\bologna-scraper
+go build -o bologna.exe ./cmd/bologna
+bologna.exe --help
+```
+
+### 2.3 Veritabanı
+
+PostgreSQL kurulum programı bir Windows servisi kurar ve servis otomatik başlar. Önce boş bir veritabanı oluşturun
+(şifre sorar):
+
+```bat
+"C:\Program Files\PostgreSQL\18\bin\createdb" -U postgres bologna
+```
+
+> Sürüm numarası farklıysa (16, 17…) yoldaki `18`'i değiştirin.
+
+Bağlantı adresini **kalıcı olarak** kaydedin. `ŞİFRE` yerine kurulumda verdiğiniz şifreyi yazın, sonra **yeni bir cmd
+açın**:
+
+```bat
+setx BOLOGNA_DB_URL "postgres://postgres:ŞİFRE@localhost:5432/bologna?sslmode=disable"
+```
+
+### 2.4 Çalıştırma
+
+```bat
+bologna.exe migrate
+bologna.exe scrape -p 1371
+bologna.exe stats
+```
+
+`migrate` tabloları oluşturur; `scrape` da bunu otomatik yapar. `scrape -p 1371` tek bir programı (~1 dk) tarar.
+Tüm site için `bologna.exe scrape --all --pool-details` çalıştırın; bkz. [Kullanım](#4-kullanım).
+
+SQL ile bakmak için:
+
+```bat
+chcp 1254
+"C:\Program Files\PostgreSQL\18\bin\psql" -U postgres -d bologna
+```
+
+`chcp 1254`, Türkçe karakterlerin cmd'de doğru görünmesi içindir.
+
+<details>
+<summary>Servis olmadan (kurulum programı kullanmadan, zip ile) PostgreSQL</summary>
+
+```bat
+"C:\Program Files\PostgreSQL\18\bin\initdb" -D %USERPROFILE%\pgdata -U postgres -A trust -E UTF8 --locale=C --locale-provider=icu --icu-locale=tr-TR
+"C:\Program Files\PostgreSQL\18\bin\pg_ctl" -D %USERPROFILE%\pgdata -l %USERPROFILE%\pgdata\log.txt start
+"C:\Program Files\PostgreSQL\18\bin\createdb" -U postgres bologna
+setx BOLOGNA_DB_URL "postgres://postgres@localhost:5432/bologna?sslmode=disable"
+```
+
+- `--locale=C --locale-provider=icu`: Türkçe Windows'ta, yerel ayar adındaki Türkçe karakter yüzünden `initdb`'nin hata vermesini önler.
+- Bu şekilde başlatılan sunucu, bilgisayar yeniden başlayınca durur. Tekrar başlatmak için `pg_ctl ... start` satırını yeniden çalıştırın.
+</details>
+
+---
+
+## 3. Kurulum: Linux / macOS
+
+```bash
+git clone https://github.com/mehmetfatihvar/staj.git
+cd staj/staj/bologna-scraper
+make build                 # bin/bologna
+make db                    # docker ile PostgreSQL (veya kendi PostgreSQL'iniz)
+export BOLOGNA_DB_URL="postgres://bologna:bologna@localhost:5432/bologna?sslmode=disable"
+bin/bologna scrape -p 1371
+```
+
+---
+
+## 4. Kullanım
+
+### 4.1 Komutlar
 
 | Komut | Ne yapar |
 |---|---|
-| `bologna migrate` | Şemayı oluşturur (idempotent; `scrape` da otomatik çalıştırır) |
-| `bologna discover -l lisans [--json]` | Birim/programları listeler, DB'ye yazmaz |
-| `bologna scrape -p 352` | Tek program (curSunit) |
-| `bologna scrape -p "https://obs.mersin.edu.tr/oibs/bologna/index.aspx?...&curUnit=12&curSunit=352"` | Tarayıcıdaki adresi doğrudan verin |
-| `bologna scrape -l lisans,onlisans -w 3` | Seviye(ler)in tümü |
-| `bologna scrape --all --rps 1.5` | Her şey |
-| `bologna scrape --all --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış ders detaylarını atlar |
-| `bologna scrape -l lisans --pool-details` | Seçmeli havuz detayları: her ders kodu **bir kez** indirilir, kopyalara yazılır (varsayılan: indirmez) |
-| `bologna scrape -l lisans --pool-details=all --rps 1` | Havuz detayları: her kopya ayrı indirilir (~30 bin sayfa) |
-| `bologna scrape --from-file progs.json` | `discover --json` çıktısından |
-| `bologna scrape -p 352 --dry-run \| jq` | DB'ye yazmadan JSON |
-| `bologna inspect "progCourses.aspx?curSunit=352"` | Sayfayı parser'ın gözünden gösterir |
-| `bologna inspect <url> --as course\|about\|curriculum\|units` | İlgili parser'ın JSON çıktısı |
+| `bologna discover -l lisans` | Seviyedeki birim ve programları listeler (DB'ye yazmaz, birkaç saniye) |
+| `bologna scrape -p 1371` | Tek program (`curSunit`). Tarayıcıdaki adres de verilebilir: `-p "https://obs.mersin.edu.tr/oibs/bologna/index.aspx?...&curSunit=1371"` |
+| `bologna scrape -l lisans` | Bir seviye (`onlisans`, `lisans`, `yukseklisans`, `doktora`; virgülle birden çoğu) |
+| `bologna scrape --all --pool-details` | **Tüm site**. Önerilen tam tarama |
+| `bologna scrape --all --pool-details --years all` | Ayrıca sitedeki **eski yılların ders planları** |
+| `bologna scrape --all --pool-details --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış dersleri atlar |
+| `bologna scrape -p 1371 --dry-run` | DB'ye yazmadan JSON olarak ekrana basar |
 | `bologna stats` | Tablo kayıt sayıları |
+| `bologna migrate` | Şemayı oluşturur/günceller (`scrape` da otomatik yapar; tekrar çalıştırmak güvenlidir) |
+| `bologna inspect "progCourses.aspx?curSunit=1371"` | Bir sayfayı parser'ın gözünden gösterir (`--as course\|about\|curriculum\|units`, `--save x.html`, `--year 2025`) |
 
-Ortak bayraklar: `--rps` (varsayılan 2 istek/sn, **tüm worker'lar toplamı**), `--retries`,
-`--timeout`, `--cache-dir ./cache` + `--use-cache` (parser geliştirirken sunucuya tekrar gitmemek için),
-`-v` (debug log), `--log-json`. Ctrl+C güvenle durdurur; çalışma `scrape_runs`'a `interrupted` yazılır.
-Her program bitince `ilerleme` logu (biten/toplam, kalan süre tahmini) basılır.
+### 4.2 `scrape` seçenekleri
 
-HTTP katmanı: ASP.NET oturum çerezi saklanır, `windows-1254`/`ISO-8859-9` sayfalar UTF-8'e çevrilir,
-429/5xx'te üstel geri çekilme + `Retry-After` uygulanır, 404 tekrar denenmez. Bir istek tüm denemelere
-rağmen sunucu kaynaklı başarısız olursa **tüm istekler** 30 sn durur; hata sürerse bekleme 5 dk'ya kadar katlanır.
+| Seçenek | Varsayılan | Açıklama |
+|---|---|---|
+| `--pool-details` | kapalı | Seçmeli havuz derslerinin detay sayfaları. Her ders kodu **bir kez** indirilir (bkz. §7). `--pool-details=all` her kopyayı ayrı indirir (~30 bin sayfa daha) |
+| `--years N` / `--years all` | `1` | Ders planı yılı sayısı. `1` = yalnızca güncel plan, `3` = güncel + 2 eski, `all` = sitedeki tüm yıllar. Eski planların dersleri de ayrı detaylarıyla alınır, **süre yıl sayısıyla katlanır** |
+| `--fresh-within 24h` | – | Detayı bu süre içinde yazılmış dersleri atla (kesilen taramayı sürdürmek için) |
+| `--skip-details` | kapalı | Yalnızca program ve ders planı (ders detay sayfaları yok; çok hızlı) |
+| `-w, --workers` | `2` | Paralel işlenen program sayısı |
+| `--rps` | `2` | Saniyedeki azami istek (**tüm worker'ların toplamı**). Siteye yük bindirmemek için 2'nin üstü önerilmez |
+| `--dry-run` | kapalı | Veritabanına yazma, JSON satırları bas |
+| `--from-file x.json` | – | `discover --json` çıktısındaki programları tara |
 
-**Seçmeli havuz dersleri:** Varsayılan taramada havuz dersleri plan satırı olarak yazılır (hangi gruba ait,
-grupta kaç ders seçilir, AKTS, saatler, öğretim şekli) ama **detay sayfaları indirilmez**. Havuzlar her programa
-kopyalanmış ortak seçmeli derslerdir: lisans planları ~38 bin satırdır, bunun ~32 bini havuz dersidir. Varsayılan
-tam lisans taraması (~6 bin ders sayfası) yaklaşık 1 saat, sonraki güncellemeler (`--fresh-within`) birkaç
-dakika sürer.
+Ortak seçenekler: `--db` (veya `BOLOGNA_DB_URL`), `--retries`, `--timeout`, `-v` (ayrıntılı log), `--log-json`,
+`--cache-dir ./cache --use-cache` (parser geliştirirken sayfaları diskten okumak için).
 
-Havuz detayları için `--pool-details` (= `shared`): programlar bittikten sonra her farklı havuz ders kodu
-**bir kez** indirilir (lisansta 29.616 kopya yerine ~4.600 sayfa, 2 istek/sn ile ~40 dk). Aynı kodlu kopyaların
-sayfaları aynıdır; yalnızca "Bölümü / Programı" alanı ve katkı matrisindeki P1…Pn (o programın çıktıları) farklıdır.
-Bu yüzden en küçük ID'li kopya kaynak olur ve tam yazılır; diğer kopyalara içerik (öğrenme çıktıları, haftalık
-konular, değerlendirme, iş yükü...) aynen yazılır, `courses.detail_source_id` kaynağı gösterir, **katkı matrisi
-yazılmaz** (havuz derslerinin matrisi sitede de genelde boştur). Her kopyanın kendi programına ait matrisi
-gerekiyorsa `--pool-details=all` her kopyayı ayrı indirir (~30 bin sayfa; tercihen gece, `--rps 1`).
+### 4.3 Çalışırken
 
-## Veri modeli
+- Her program bitince `ilerleme biten=… toplam=… kalan_süre=…` satırı basılır. Havuz aşamasında da `havuz ilerleme` basılır.
+- **Ctrl+C** taramayı güvenle durdurur (`scrape_runs.status = interrupted`). Aynı komutu `--fresh-within 24h` ile
+  tekrar çalıştırırsanız kaldığı yerden devam eder.
+- Tekrar çalıştırmak kopya üretmez: kayıtlar sitenin kendi ID'leriyle güncellenir.
+- Sunucu uzun taramada 503 dönebilir. Bu durumda istemci **tüm istekleri** 30 sn bekletir; hata sürerse bekleme 5 dk'ya
+  kadar katlanır. Hatalar `scrape_errors` tablosuna yazılır.
+
+---
+
+## 5. Veri modeli ve örnek sorgular
 
 ```
-units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
-                          │                            │
-                          N─M courses (curCourse) ──── course_program_outcomes (katkı 1-5)
-                   program_courses                │
-                   (yarıyıl, Z/S, seçmeli grup)   ├─ course_learning_outcomes
-                                                  ├─ course_weekly_topics
-                                                  ├─ course_resources
-                                                  ├─ course_assessments
-                                                  └─ course_workloads
+units (curUnit) ──1:N── programs (curSunit) ──1:N── program_outcomes (PÇ1, PÇ2…)
+  │ about                     │ curriculum_year                  │
+  │                           │                                  │
+  │                   program_courses (plan satırı)              │
+  │                   yarıyıl, Z/S, plan_year,                   │
+  │                   seçmeli grup ─► havuz dersi                │
+  │                           │                                  │
+  │                        courses (curCourse) ──────────────────┤
+  │                           ├─ course_learning_outcomes (ÖÇ1, ÖÇ2…)
+  │                           ├─ course_weekly_topics
+  │                           ├─ course_resources
+  │                           ├─ course_assessments
+  │                           ├─ course_workloads
+  │                           ├─ course_outcome_matrix   (ÖÇ × PÇ → katkı 1-5)
+  │                           └─ course_program_outcomes (PÇ başına en yüksek katkı)
+scrape_runs ──1:N── scrape_errors
 ```
 
-- Anahtarlar OİBS'nin kendi ID'leri → tekrar çalıştırmak kopya üretmez, günceller.
-  Ders planı ve dersin alt tabloları her yazımda **değiştirilir** (plandan çıkan ders ilişkisi silinir).
-- Bir ders birden çok programın planında olabilir (`program_courses`); detay sayfası bir çalışmada
-  yalnızca bir kez indirilir. `courses.program_id` dersin sahibidir ve katkı matrisi o programın çıktılarına bağlanır.
-  OİBS seçmeli havuz derslerini (ör. OSD GÜZ2) her programın planına **ayrı kopya** (ayrı `curCourse`) olarak koyar;
-  sayfalarındaki P1…Pn o programın çıktılarıdır, bu yüzden havuz dersleri de planında göründükleri programa aittir.
-- Sitede boş olan katkı hücreleri ("katkı yok") satır olarak yazılmaz.
-- Seçmeli dersler iki katmanlıdır: grup satırı (`program_courses.is_elective_group`, kaç ders
-  seçileceği `group_course_count`, ör. "NORMAL EĞİTİM PAKETİ" → 5) ve ona `elective_group_id` ile
-  bağlı havuz dersleri. `v_curriculum` grup kodu/adını da gösterir. Grup satırlarının detay sayfası yoktur.
-- `programs.curriculum_year`: taranan ders planının yılı (sitede seçili olan, genelde en güncel).
-- `courses.detail_empty`: sitede ders sayfası boş ("Dersin Ayrıntıları: Kayıt Yok..."). Lisansta öğrenme
-  çıktısı olmayan havuz derslerinin neredeyse tamamı böyledir; kod, ad, AKTS ve saatler yine ders planından gelir.
-- `units.levels` bir dizidir: enstitüler hem yüksek lisans hem doktora programı barındırır.
-- Program çıktısı açıklamaları üç kaynaktan gelir, öncelik sırası: `outcomes_page` > `course_matrix` > `about_text` (`program_outcomes.source`).
-  Resmî çıktı sayfası geldiğinde metinden tahmin edilip listede olmayan maddeler silinir.
-- Katkı matrisi üç düzende okunur: `No | Çıktı | Düzey`, `No | Çıktı | 1..5 (X işaretli)` ve yatay `PÇ1 | PÇ2 | …` (ÖÇ×PÇ ise her PÇ için en yüksek düzey).
-- Tanınmayan bölümler kaybolmaz: `programs.sections`, `programs.info`, `courses.details` (JSONB).
-- Ders ↔ program çıktısı katkısı iki düzeyde tutulur: `course_outcome_matrix` sitedeki ÖÇ×PÇ matrisinin
-  tamamı (hangi öğrenme çıktısı hangi PÇ'ye ne katkı veriyor), `course_program_outcomes` PÇ başına en yüksek düzey.
-- Hazır view'lar: `v_curriculum`, `v_course_outcome_matrix`, `v_course_lo_po_matrix`. Hatalar: `scrape_errors`.
+Tüm ilişkiler foreign key ile tanımlı. Hazır görünümler (view):
 
-## Gerçek siteye dair notlar
+| View | İçerik |
+|---|---|
+| `v_curriculum` | Ders planı: birim, program, yarıyıl, ders, AKTS, seçmeli grup kodu/adı, `plan_year`, `is_current` |
+| `v_course_lo_po_matrix` | Ders → öğrenme çıktısı → program çıktısı → katkı düzeyi (açıklamalarıyla) |
+| `v_course_outcome_matrix` | Ders → program çıktısı → en yüksek katkı |
 
-- Ders linkleri `href` değil `onclick="prolizOpenCourseDetails(ID)"`; ID `progCourseDetails.aspx?curCourse=ID`'ye gider.
-- Ders planı tek tablodur; "1.Yarıyıl Ders Planı" satırları yarıyılı, `collapse_<grup>` sınıfı havuz üyeliğini belirtir.
-- Keşif sayfasında birim adı `<h5 class="panel-title">` içindedir, ID'si aynı başlıktaki `facAbout.aspx?curUnit=`
-  bilgi ikonundadır. Ders planı başlığı ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") ikinci kaynaktır.
-- Sayfalarda `<meta charset>` yok; sunucu başlığı yoksa geçerli UTF-8 olduğu varsayılır.
-- "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) her programda aynı dersleri içerir ama her programa ayrı
-  ID'lerle kopyalanmıştır (lisansta 29.616 havuz satırı, 4.574 farklı kod); bu yüzden varsayılan taramada detayları
-  indirilmez, `--pool-details` ise her kodu bir kez indirir.
-- Uzun taramalarda (~1 saat, binlerce istek) sunucu 503 dönmeye başlayabilir; istemci bu durumda tüm istekleri bekletir.
+Önemli sütunlar:
 
-## Parser nasıl çalışır / siteye uyarlama
+| Sütun | Anlamı |
+|---|---|
+| `programs.curriculum_year` | Sitede seçili (güncel) ders planı yılı |
+| `program_courses.plan_year` | Satırın ait olduğu plan yılı (eski planlar `--years` ile) |
+| `program_courses.is_elective_group`, `group_course_count` | Seçmeli grup satırı ve gruptan seçilecek ders sayısı |
+| `program_courses.elective_group_id` | Havuz dersinin bağlı olduğu grup |
+| `courses.program_id` | Dersin sahibi olan program (katkı matrisi bu programın çıktılarına bağlanır) |
+| `courses.detail_source_id` | Havuz kopyasının içeriğinin alındığı ders (bkz. §7) |
+| `courses.detail_empty` | Sitede ders sayfası boş ("Kayıt Yok...") |
+| `courses.details`, `programs.sections` | Sayfadaki tüm alanlar ham olarak (JSONB). Tanınmayan bölümler de kaybolmaz |
 
-Sayfalar ASP.NET; ID/class yerine her tablo **önündeki başlık metniyle** etiketlenir
-("Dersin Öğrenme Çıktıları", "Değerlendirme Sistemi"...) ve sütunlar başlık satırından bulunur.
-Sayfa adları `internal/scraper/scraper.go` başındaki sabitlerde, seviye→`type` eşlemesi `LevelTypes`'ta.
-Bir bölüm yanlış okunursa: `bologna inspect <url>` ile tablo etiketlerine bakın, `internal/parse/`'daki
-ilgili `Norm` kalıbını düzeltin, gerçek HTML'i `--save` ile `testdata`'ya ekleyip test yazın.
+Örnek sorgular:
 
-## Testler
+```sql
+-- Bir programın güncel ders planı
+SELECT semester, code, course_name, course_type, ects, elective_group_name
+FROM v_curriculum WHERE program_id = 1371 AND is_current ORDER BY semester, code;
+
+-- Bir dersin öğrenme çıktısı × program çıktısı katkı matrisi
+SELECT lo_no, learning_outcome, outcome_no, contribution
+FROM v_course_lo_po_matrix WHERE course_id = 1098805 ORDER BY lo_no, outcome_no;
+
+-- Programların toplam AKTS'si (güncel plan, grup satırları hariç zorunlu dersler)
+SELECT program_name, sum(ects) FROM v_curriculum
+WHERE is_current AND course_type ILIKE 'zorunlu%' GROUP BY program_name ORDER BY 2 DESC;
+
+-- Bir dersin haftalık konuları
+SELECT week, topic FROM course_weekly_topics WHERE course_id = 1098805 ORDER BY week;
+
+-- Birim tanıtımları
+SELECT name, left(about, 120) FROM units ORDER BY name;
+```
+
+---
+
+## 6. Tam tarama: süre ve sonuçlar
+
+2026-09-26'da `--pool-details` ile, 2 istek/sn hızında:
+
+| Seviye | Program | Süre | Hata |
+|---|---|---|---|
+| Lisans | 153 | ~1 sa 40 dk (havuz dersleri dahil) | 0 |
+| Önlisans | 88 | 35 dk | 0 |
+| Yüksek lisans + Doktora | 201 | 63 dk | 0 |
+| **Toplam** | **442** | **~3,5 saat** | **0** |
+
+Sonuç: 45 birim, 442 program, 4.598 program çıktısı, 50.576 ders, 233 bin öğrenme çıktısı, 595 bin haftalık konu
+ve 556 bin katkı matrisi hücresi.
+
+`--years all` ile her programın sitedeki eski planları da alınır. Bu durumda süre, yıl sayısıyla orantılı artar
+(ör. 3 yıllık programlarda ~3 kat); gece çalıştırılması önerilir.
+
+---
+
+## 7. Sitenin özellikleri ve tasarım kararları
+
+- **ASP.NET sayfaları:** tablolar ID/class ile değil, **önlerindeki başlık metniyle** ("Dersin Öğrenme Çıktıları",
+  "AKTS Hesaplama İçeriği"…) tanınır. Sütunlar başlık satırından bulunur.
+- **Ders linkleri:** `href` değil, `onclick="prolizOpenCourseDetails(ID)"`.
+- **Ders planı:** tek bir tablodur. "1.Yarıyıl Ders Planı" satırları yarıyılı belirtir; `collapse_<grup>` sınıfı
+  havuz üyeliğini gösterir.
+- **Seçmeli havuzlar:** OİBS ortak seçmeli dersleri **her programa ayrı ID ile kopyalar** (lisansta 29.616 kopya,
+  4.574 farklı ders). `--pool-details` her ders kodunu **bir kez** indirir, en küçük ID'li kopyayı tam yazar,
+  diğer kopyalara aynı içeriği yazar (`detail_source_id` kaynağı gösterir). Katkı matrisi kopyalara yazılmaz, çünkü
+  sayfadaki P1…Pn kaynak programın çıktılarıdır. Bu yöntemle istek sayısı ~30 binden ~4.600'e iner.
+- **Eski yıllar:** ders planı sayfasındaki yıl seçici bir ASP.NET form gönderimidir (postback). Scraper formu
+  (ViewState dahil) tarayıcı gibi geri gönderir. Her yılın planı **ayrı ders ID'lerine** sahiptir, bu yüzden eski planlar
+  `plan_year` ile aynı tablolarda karışmadan durur.
+- **Boş sayfalar:** içeriği girilmemiş derslerde site "Kayıt Yok..." gösterir; bunlar `detail_empty = true` ile
+  işaretlenir (lisansta ~3.300 ders).
+- **Kodlama:** sayfalarda `<meta charset>` yoktur; geçerli UTF-8 değilse `windows-1254` kabul edilir.
+- **Nezaket:** varsayılan 2 istek/sn, 503/429'da geri çekilme ve bekleme, tekrar denemeler.
+
+---
+
+## 8. Geliştirme ve testler
+
+```
+cmd/bologna/        main
+internal/cli/       komutlar (cobra)
+internal/fetch/     HTTP istemcisi: hız sınırı, tekrar deneme, bekleme, çerez, POST (postback), kodlama
+internal/parse/     HTML → Go yapıları (sayfa türü başına bir parser)
+internal/scraper/   tarama akışı: keşif, program, yıllar, ders detayları, havuzlar
+internal/store/     PostgreSQL (schema.sql + upsert'ler)
+internal/parse/testdata/real/   sitenin gerçek sayfaları (testlerde kullanılır)
+```
 
 ```bash
-make test               # parser, HTTP istemcisi (httptest), scraper uçtan uca (fixture sunucusu), CLI
-make test-integration   # + PostgreSQL (BOLOGNA_TEST_DB_URL; geçici şema açar, sonunda siler)
-make lint
+make test               # parser, HTTP istemcisi, uçtan uca scraper (gerçek sayfaları sunan test sunucusu)
+make test-integration   # + PostgreSQL (BOLOGNA_TEST_DB_URL; geçici şemada çalışır, sonunda siler)
+make lint               # gofmt + go vet
 ```
 
-CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
+GitHub Actions (`.github/workflows/bologna-scraper.yml`) her push'ta lint, PostgreSQL'li testler ve derlemeyi çalıştırır.
 
-`internal/parse/testdata/real/` gerçek OİBS sayfalarıdır (Bilgisayar Mühendisliği, 1371; ViewState
-kırpıldı). Beş sayfa türünün (program bilgisi, program yeterlilikleri, ders planı, ders detayı
-ve keşif (unitSelection) parser'ları bunlara karşı test edilir; kök dizindeki diğer fixture'lar
-sentetik uç durumlardır.
-Yeni gerçek sayfa eklemek için:
->
-> ```bash
-> bologna inspect "unitSelection.aspx?type=lis" --as units --save internal/parse/testdata/real_units.html
-> bologna inspect "progCourses.aspx?curSunit=<id>" --save internal/parse/testdata/real_courses.html
-> bologna inspect "progCourseDetails.aspx?curCourse=<id>" --as course
-> ```
+**Site değişirse:** `bologna inspect <sayfa> --save x.html` ile sayfayı indirin ve tablo etiketlerine bakın.
+`internal/parse/` içindeki ilgili kalıbı düzeltin, sayfayı `testdata/real/` altına ekleyip test yazın.
+Sayfa adları `internal/scraper/scraper.go` başındaki sabitlerdedir.
+
+---
+
+## 9. Bilinen sınırlar
+
+- **İngilizce sürüm** (`lang=en`) taranmaz. Parser Türkçe başlıklara göre ayarlıdır.
+- Bologna ana menüsündeki **üniversite geneli bilgi sayfaları** (şehir, barınma vb.) taranmaz. Yalnızca birim,
+  program ve ders sayfaları taranır.
+- **"Ders Yapısı"** yüzdeleri (ör. "Sosyal Bilimler %50") ayrı tabloya ayrılmaz, `courses.details` içinde metin olarak durur.
+- Siteden kaldırılan program veya dersler veritabanından otomatik silinmez. Bir programın planı ise her taramada
+  yeniden yazılır; plandan çıkan ders ilişkisi silinir.
