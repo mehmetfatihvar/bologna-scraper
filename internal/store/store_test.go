@@ -116,19 +116,22 @@ func TestStoreRoundTrip(t *testing.T) {
 	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE course_id = 91 AND elective_group_code = '1555S01' AND lab_hours IS NULL`); n != 1 {
 		t.Fatal("havuz dersi grubuna bağlanmadı")
 	}
-	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 91 AND program_id IS NULL`); n != 1 {
-		t.Fatal("havuz dersi planında göründüğü programa sahiplendirilmemeli")
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 91 AND program_id = 1`); n != 1 {
+		t.Fatal("havuz dersi planında göründüğü programa ait olmalı (OİBS her programa ayrı kopya koyar)")
 	}
-	// Sahibi bilinmeyen havuz dersinin detayı: içerik yazılır, katkı matrisi hiçbir programa bağlanmaz.
-	must(t, st.Course(ctx, 0, 91, &parse.CourseDetail{Name: "YAPAY ZEKA", Details: map[string]string{},
+	// Sahibi bilinmeden yazılmış ders: içerik yazılır, katkısı bağlanmaz ve taze sayılmaz (yeniden indirilir).
+	must(t, st.Course(ctx, 0, 92, &parse.CourseDetail{Name: "SAHİPSİZ", Details: map[string]string{},
 		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},
 		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(4)}},
 		OutcomeMatrix:    []parse.MatrixCell{{LO: 1, PO: 1, Level: 4}}}, "u"))
-	if n := st.count(t, `SELECT count(*) FROM course_learning_outcomes WHERE course_id = 91`); n != 1 {
+	if n := st.count(t, `SELECT count(*) FROM course_learning_outcomes WHERE course_id = 92`); n != 1 {
 		t.Fatal("sahipsiz ders içeriği yazılmadı")
 	}
-	if n := st.count(t, `SELECT (SELECT count(*) FROM course_program_outcomes WHERE course_id = 91) + (SELECT count(*) FROM course_outcome_matrix WHERE course_id = 91)`); n != 0 {
+	if n := st.count(t, `SELECT (SELECT count(*) FROM course_program_outcomes WHERE course_id = 92) + (SELECT count(*) FROM course_outcome_matrix WHERE course_id = 92)`); n != 0 {
 		t.Fatal("sahipsiz dersin katkısı bir programa bağlandı")
+	}
+	if fresh, _ := st.CourseFresh(ctx, 92, time.Now().Add(-time.Hour)); fresh {
+		t.Fatal("sahipsiz ders taze sayılmamalı")
 	}
 	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE course_id = 90 AND is_elective_group AND group_course_count = 2`); n != 1 {
 		t.Fatal("seçmeli grup satırı")

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -57,6 +56,10 @@ type Scraper struct {
 	Log         *slog.Logger
 	Workers     int
 	SkipDetails bool
+	// SkipPoolDetails: seçmeli havuz derslerinin (plan satırı yine yazılır) detay sayfalarını indirme.
+	// Havuzlar büyük ve çoğu programda aynı ortak seçmeli derslerin kopyalarıdır; tam lisans taramasında
+	// istek sayısını ~%80 azaltır.
+	SkipPoolDetails bool
 	// FreshWithin > 0 ise, detayı bu süre içinde yazılmış dersler tekrar indirilmez.
 	FreshWithin time.Duration
 	OnError     func(url string, err error)
@@ -64,7 +67,6 @@ type Scraper struct {
 	programs, courses, skipped, errors atomic.Int64
 	done                               atomic.Int64 // biten program (başarılı/başarısız)
 	courseSeen                         sync.Map     // curCourse -> struct{}: aynı çalışmada bir kez indir
-	deferred                           sync.Map     // curCourse -> struct{}: sahibi belirsiz havuz dersleri
 }
 
 type Stats struct {
@@ -185,9 +187,6 @@ loop:
 	}
 	close(jobs)
 	wg.Wait()
-	if ctx.Err() == nil && !s.SkipDetails {
-		s.runDeferred(ctx)
-	}
 	return s.Stats()
 }
 
@@ -299,25 +298,22 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		return
 	}
 
-	// 5) Ders detayları. Seçmeli havuz dersleri (GroupID != 0) çoğunlukla başka bir programa aittir
-	// (ör. "ORTAK SEÇMELİ DERSLER"): sayfalarındaki PÇ katkıları o programın çıktılarıdır. Bu yüzden
-	// burada indirilmez; sahibi aynı çalışmadaysa onunla, değilse Run sonunda sahipsiz indirilir.
+	// 5) Ders detayları. Seçmeli havuz dersleri de bu programa aittir: OİBS her programın planına
+	// kendi kopyasını (ayrı curCourse) koyar ve sayfadaki P1…Pn bu programın çıktılarıdır.
 	for _, e := range entries {
 		if ctx.Err() != nil {
 			return
 		}
 		switch {
 		case e.IsGroup: // seçmeli grup satırının detay sayfası yok
-		case e.GroupID != 0:
-			s.deferred.Store(e.CourseID, struct{}{})
+		case e.GroupID != 0 && s.SkipPoolDetails:
 		default:
 			s.course(ctx, ref.ID, e.CourseID)
 		}
 	}
 }
 
-// course, ders detayını bir çalışmada en fazla bir kez indirip yazar. ownerID 0 ise ders hiçbir
-// programa sahiplenilmez (katkı matrisi, sahibi bilinmeden yanlış programa bağlanmasın diye yazılmaz).
+// course, ders detayını bir çalışmada en fazla bir kez indirip yazar.
 func (s *Scraper) course(ctx context.Context, ownerID, courseID int64) {
 	if _, dup := s.courseSeen.LoadOrStore(courseID, struct{}{}); dup {
 		return
@@ -345,41 +341,6 @@ func (s *Scraper) course(ctx context.Context, ownerID, courseID int64) {
 	}
 	s.courses.Add(1)
 	s.Log.Debug("ders", "id", courseID, "sahip", ownerID, "kod", d.Code, "ad", d.Name)
-}
-
-// runDeferred, sahibi bu çalışmada taranmamış havuz derslerinin detayını indirir.
-func (s *Scraper) runDeferred(ctx context.Context) {
-	var ids []int64
-	s.deferred.Range(func(k, _ any) bool {
-		if _, done := s.courseSeen.Load(k); !done {
-			ids = append(ids, k.(int64))
-		}
-		return true
-	})
-	if len(ids) == 0 {
-		return
-	}
-	slices.Sort(ids)
-	s.Log.Info("sahibi taranmayan seçmeli havuz dersleri", "ders", len(ids))
-	jobs := make(chan int64)
-	var wg sync.WaitGroup
-	for i := 0; i < max(s.Workers, 1); i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for cid := range jobs {
-				s.course(ctx, 0, cid)
-			}
-		}()
-	}
-	for _, cid := range ids {
-		if ctx.Err() != nil {
-			break
-		}
-		jobs <- cid
-	}
-	close(jobs)
-	wg.Wait()
 }
 
 // JSONSink, veritabanı olmadan (--dry-run) sonuçları JSON satırları olarak yazar.

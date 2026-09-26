@@ -165,3 +165,47 @@ func TestParseRetryAfter(t *testing.T) {
 		t.Fatal("parseRetryAfter")
 	}
 }
+
+// Sunucu 503 dönmeye devam ederse istemci tüm istekleri durdurur ve cezayı büyütür; başarıda sıfırlar.
+func TestCooldownOnPersistentServerErrors(t *testing.T) {
+	var fail atomic.Bool
+	fail.Store(true)
+	var cooldowns []time.Duration
+	c, srv := newTest(t, func(w http.ResponseWriter, r *http.Request) {
+		if fail.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("ok"))
+	}, Options{Retries: 0, Cooldown: 100 * time.Millisecond, OnCooldown: func(d time.Duration, _ error) { cooldowns = append(cooldowns, d) }})
+	ctx := context.Background()
+	_, _ = c.Get(ctx, srv.URL+"/a")
+	start := time.Now()
+	_, _ = c.Get(ctx, srv.URL+"/b") // ilk cezayı (100ms) beklemeli
+	if time.Since(start) < 90*time.Millisecond {
+		t.Fatalf("cooldown beklenmedi: %v", time.Since(start))
+	}
+	if len(cooldowns) != 2 || cooldowns[0] != 100*time.Millisecond || cooldowns[1] != 200*time.Millisecond {
+		t.Fatalf("ceza büyümedi: %v", cooldowns)
+	}
+	fail.Store(false)
+	time.Sleep(250 * time.Millisecond)
+	if b, err := c.Get(ctx, srv.URL+"/c"); err != nil || string(b) != "ok" {
+		t.Fatal(b, err)
+	}
+	fail.Store(true)
+	_, _ = c.Get(ctx, srv.URL+"/d")
+	if cooldowns[len(cooldowns)-1] != 100*time.Millisecond {
+		t.Fatalf("başarıdan sonra ceza sıfırlanmadı: %v", cooldowns)
+	}
+}
+
+func TestNotFoundDoesNotTriggerCooldown(t *testing.T) {
+	called := false
+	c, srv := newTest(t, func(w http.ResponseWriter, r *http.Request) { http.NotFound(w, r) },
+		Options{Retries: 0, OnCooldown: func(time.Duration, error) { called = true }})
+	_, _ = c.Get(context.Background(), srv.URL+"/x")
+	if called {
+		t.Fatal("404 sunucu hatası sayılmamalı")
+	}
+}

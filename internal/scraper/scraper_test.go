@@ -110,9 +110,47 @@ func TestCancelledRunStops(t *testing.T) {
 	}
 }
 
-// Gerçek BİLGİSAYAR MÜHENDİSLİĞİ planı: 43 doğrudan ders programa bağlanır; 285 seçmeli havuz dersi
-// (çoğu "ORTAK SEÇMELİ DERSLER"e ait) sahipsiz indirilir, 17 grup satırının detayı istenmez.
-func TestPoolCoursesNotClaimed(t *testing.T) {
+// Gerçek BİLGİSAYAR MÜHENDİSLİĞİ planı: 43 doğrudan ders + 285 seçmeli havuz dersi. OİBS havuz
+// derslerini her programa ayrı kopya (curCourse) olarak koyar; hepsi bu programa aittir.
+// 17 grup satırının detay sayfası yoktur. --skip-pool-details ile yalnızca 43 detay indirilir.
+func TestRealPlanDetailsAndOwnership(t *testing.T) {
+	for _, tc := range []struct {
+		skipPool    bool
+		wantDetails int
+	}{{false, 328}, {true, 43}} {
+		srv, hits := realSite(t)
+		c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
+		var out bytes.Buffer
+		sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2, SkipPoolDetails: tc.skipPool}
+		st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
+		if st.Errors != 0 || st.Courses != int64(tc.wantDetails) || hits() != tc.wantDetails {
+			t.Fatalf("skipPool=%v stats=%+v detay isteği=%d", tc.skipPool, st, hits())
+		}
+		owners := map[int64]int{}
+		dec := json.NewDecoder(&out)
+		for dec.More() {
+			var m struct {
+				Type string `json:"type"`
+				Data struct {
+					ProgramID int64 `json:"program_id"`
+				} `json:"data"`
+			}
+			if err := dec.Decode(&m); err != nil {
+				t.Fatal(err)
+			}
+			if m.Type == "course" {
+				owners[m.Data.ProgramID]++
+			}
+		}
+		if len(owners) != 1 || owners[1371] != tc.wantDetails {
+			t.Fatalf("sahiplik: %v", owners)
+		}
+	}
+}
+
+// realSite, testdata/real sayfalarını sunar; her ders için aynı detay sayfası döner.
+func realSite(t *testing.T) (*httptest.Server, func() int) {
+	t.Helper()
 	real := filepath.Join("..", "parse", "testdata", "real")
 	pages := map[string]string{
 		"/progAbout.aspx":         "progAbout_1371.html",
@@ -128,7 +166,7 @@ func TestPoolCoursesNotClaimed(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		if f == pages["/progCourseDetails.aspx"] {
+		if r.URL.Path == "/progCourseDetails.aspx" {
 			mu.Lock()
 			detailHits++
 			mu.Unlock()
@@ -136,31 +174,6 @@ func TestPoolCoursesNotClaimed(t *testing.T) {
 		b, _ := os.ReadFile(filepath.Join(real, f))
 		_, _ = w.Write(b)
 	}))
-	defer srv.Close()
-	c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
-	var out bytes.Buffer
-	sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2}
-	st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
-	if st.Errors != 0 || st.Courses != 328 || detailHits != 328 {
-		t.Fatalf("stats=%+v detay isteği=%d", st, detailHits)
-	}
-	owners := map[int64]int{}
-	dec := json.NewDecoder(&out)
-	for dec.More() {
-		var m struct {
-			Type string `json:"type"`
-			Data struct {
-				ProgramID int64 `json:"program_id"`
-			} `json:"data"`
-		}
-		if err := dec.Decode(&m); err != nil {
-			t.Fatal(err)
-		}
-		if m.Type == "course" {
-			owners[m.Data.ProgramID]++
-		}
-	}
-	if owners[1371] != 43 || owners[0] != 285 {
-		t.Fatalf("sahiplik: %v", owners)
-	}
+	t.Cleanup(srv.Close)
+	return srv, func() int { mu.Lock(); defer mu.Unlock(); return detailHits }
 }

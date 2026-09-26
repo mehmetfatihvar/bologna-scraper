@@ -157,9 +157,10 @@ func (s *Store) ProgramOutcomes(ctx context.Context, programID int64, outs []par
 }
 
 // CourseFresh, dersin detayı since'ten sonra yazılmışsa true döner (scraper.FreshChecker).
+// Sahipsiz yazılmış dersler (katkıları bağlanamamış) taze sayılmaz, yeniden indirilir.
 func (s *Store) CourseFresh(ctx context.Context, courseID int64, since time.Time) (bool, error) {
 	var ok bool
-	err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM courses WHERE id = $1 AND detail_scraped_at >= $2)`,
+	err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM courses WHERE id = $1 AND detail_scraped_at >= $2 AND program_id IS NOT NULL)`,
 		courseID, since).Scan(&ok)
 	return ok, err
 }
@@ -180,11 +181,6 @@ func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curr
 			if e.Semester == 0 {
 				sem = nil
 			}
-			// Seçmeli havuz dersi bu programın değil (çoğunlukla "ORTAK SEÇMELİ DERSLER"in); sahiplenme.
-			owner := nzID(programID)
-			if e.GroupID != 0 {
-				owner = nil
-			}
 			// Ders plandaki güncel bilgilerle yazılır (plan ve detay sayfası aynı kaynaktan; en yeni değer kazanır,
 			// boş gelen alan eskisini silmez). Sahip program ilk yazanda kalır. Detay sayfası sonra zenginleştirir.
 			b.Queue(`
@@ -201,7 +197,7 @@ func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curr
 					credit         = COALESCE(EXCLUDED.credit, courses.credit),
 					ects           = COALESCE(EXCLUDED.ects, courses.ects),
 					updated_at     = now()`,
-				e.CourseID, owner, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
+				e.CourseID, programID, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
 			b.Queue(`
 				INSERT INTO program_courses (program_id, course_id, semester, course_type, delivery_mode,
 					is_elective_group, group_course_count, elective_group_id, ordinal)

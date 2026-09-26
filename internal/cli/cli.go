@@ -97,9 +97,13 @@ func logger() *slog.Logger {
 }
 
 func client() (*fetch.Client, error) {
+	log := logger()
 	return fetch.New(fetch.Options{
 		BaseURL: g.baseURL, Lang: g.lang, RPS: g.rps, Timeout: g.timeout, Retries: g.retries,
 		UserAgent: g.userAgent, CacheDir: g.cacheDir, UseCache: g.useCache,
+		OnCooldown: func(d time.Duration, err error) {
+			log.Warn("sunucu hata veriyor, tüm istekler bekletiliyor", "süre", d, "err", err)
+		},
 	})
 }
 
@@ -222,6 +226,7 @@ func scrapeCmd() *cobra.Command {
 		workers     int
 		limit       int
 		skipDetails bool
+		skipPool    bool
 		freshWithin time.Duration
 		dryRun      bool
 	)
@@ -242,7 +247,7 @@ func scrapeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, FreshWithin: freshWithin}
+			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, SkipPoolDetails: skipPool, FreshWithin: freshWithin}
 
 			// Hedef programlar
 			var refs []parse.ProgramRef
@@ -332,6 +337,7 @@ func scrapeCmd() *cobra.Command {
 	fl.IntVarP(&workers, "workers", "w", 2, "paralel işlenecek program sayısı")
 	fl.IntVar(&limit, "limit", 0, "en fazla N program işle (test için)")
 	fl.BoolVar(&skipDetails, "skip-details", false, "ders detay sayfalarını atla (sadece program + ders planı)")
+	fl.BoolVar(&skipPool, "skip-pool-details", false, "seçmeli havuz derslerinin detay sayfalarını atla (plan ilişkisi yine yazılır; tam taramada istekleri ~%80 azaltır)")
 	fl.DurationVar(&freshWithin, "fresh-within", 0, "detayı bu süre içinde yazılmış dersleri atla (ör. 24h; kesilen taramayı sürdürmek için)")
 	fl.BoolVar(&dryRun, "dry-run", false, "veritabanına yazma; sonuçları JSON satırları olarak stdout'a bas")
 	return cmd

@@ -35,6 +35,11 @@ type Options struct {
 	UserAgent string
 	CacheDir  string // boş değilse ham HTML buraya yazılır
 	UseCache  bool   // true ise önce cache'e bakılır
+	// Cooldown: bir istek tüm denemelere rağmen sunucu kaynaklı (5xx/429/zaman aşımı) başarısız olursa
+	// TÜM istekler bu süre durur; ardışık her başarısızlıkta ikiye katlanır (en fazla 10×), ilk başarıda
+	// sıfırlanır. Sunucu yük altındayken üstüne gitmemek için. Varsayılan 30 sn.
+	Cooldown   time.Duration
+	OnCooldown func(d time.Duration, err error) // isteğe bağlı: bekleme başlarken (loglamak için)
 }
 
 type HTTPError struct {
@@ -57,6 +62,7 @@ type Client struct {
 	mu       sync.Mutex
 	next     time.Time
 	interval time.Duration
+	cooldown time.Duration // şu anki ceza süresi (0: sağlıklı)
 }
 
 func New(o Options) (*Client, error) {
@@ -69,6 +75,9 @@ func New(o Options) (*Client, error) {
 	}
 	if o.Timeout <= 0 {
 		o.Timeout = 30 * time.Second
+	}
+	if o.Cooldown <= 0 {
+		o.Cooldown = 30 * time.Second
 	}
 	if o.UserAgent == "" {
 		o.UserAgent = "bologna-scraper/1.0 (+staj projesi)"
@@ -158,8 +167,8 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 	)
 	for attempt := 0; attempt <= c.opts.Retries; attempt++ {
 		if attempt > 0 {
-			// Üstel geri çekilme + jitter; sunucu Retry-After verdiyse ona uy.
-			backoff := time.Duration(1<<uint(attempt-1))*time.Second + time.Duration(rand.Int64N(int64(500*time.Millisecond)))
+			// Üstel geri çekilme (2, 4, 8 sn…) + jitter; sunucu Retry-After verdiyse ona uy.
+			backoff := time.Duration(1<<uint(attempt))*time.Second + time.Duration(rand.Int64N(int64(time.Second)))
 			if retryAfter > backoff {
 				backoff = retryAfter
 			}
@@ -182,6 +191,7 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 			continue
 		}
 		if status == http.StatusOK {
+			c.healthy()
 			if c.opts.CacheDir != "" {
 				_ = os.WriteFile(c.cachePath(rawURL), body, 0o644)
 			}
@@ -189,10 +199,38 @@ func (c *Client) Get(ctx context.Context, rawURL string) ([]byte, error) {
 		}
 		lastErr = &HTTPError{URL: rawURL, Status: status}
 		if status >= 400 && status < 500 && status != http.StatusTooManyRequests {
+			c.healthy() // 404 vb. sunucunun sağlıklı cevabıdır
 			return nil, lastErr
 		}
 	}
+	if ctx.Err() == nil {
+		c.penalize(lastErr)
+	}
 	return nil, lastErr
+}
+
+// penalize: sunucu kaynaklı kalıcı hata → tüm istekleri cooldown kadar durdur, cezayı büyüt.
+func (c *Client) penalize(err error) {
+	c.mu.Lock()
+	if c.cooldown == 0 {
+		c.cooldown = c.opts.Cooldown
+	} else {
+		c.cooldown = min(c.cooldown*2, 10*c.opts.Cooldown)
+	}
+	d := c.cooldown
+	if until := time.Now().Add(d); until.After(c.next) {
+		c.next = until
+	}
+	c.mu.Unlock()
+	if c.opts.OnCooldown != nil {
+		c.opts.OnCooldown(d, err)
+	}
+}
+
+func (c *Client) healthy() {
+	c.mu.Lock()
+	c.cooldown = 0
+	c.mu.Unlock()
 }
 
 func (c *Client) do(ctx context.Context, rawURL string) ([]byte, int, time.Duration, error) {

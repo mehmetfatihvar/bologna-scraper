@@ -28,6 +28,7 @@ Docker ile hepsi birden: `docker compose run --rm scraper scrape --all`
 | `bologna scrape -l lisans,onlisans -w 3` | Seviye(ler)in tümü |
 | `bologna scrape --all --rps 1.5` | Her şey |
 | `bologna scrape --all --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış ders detaylarını atlar |
+| `bologna scrape -l lisans --skip-pool-details` | Seçmeli havuz derslerinin detay sayfalarını atlar (plan ilişkisi yine yazılır) |
 | `bologna scrape --from-file progs.json` | `discover --json` çıktısından |
 | `bologna scrape -p 352 --dry-run \| jq` | DB'ye yazmadan JSON |
 | `bologna inspect "progCourses.aspx?curSunit=352"` | Sayfayı parser'ın gözünden gösterir |
@@ -40,7 +41,13 @@ Ortak bayraklar: `--rps` (varsayılan 2 istek/sn, **tüm worker'lar toplamı**),
 Her program bitince `ilerleme` logu (biten/toplam, kalan süre tahmini) basılır.
 
 HTTP katmanı: ASP.NET oturum çerezi saklanır, `windows-1254`/`ISO-8859-9` sayfalar UTF-8'e çevrilir,
-429/5xx'te üstel geri çekilme + `Retry-After` uygulanır, 404 tekrar denenmez.
+429/5xx'te üstel geri çekilme + `Retry-After` uygulanır, 404 tekrar denenmez. Bir istek tüm denemelere
+rağmen sunucu kaynaklı başarısız olursa **tüm istekler** 30 sn durur; hata sürerse bekleme 5 dk'ya kadar katlanır.
+
+**Tam tarama hakkında:** Lisans planlarının toplamı ~36 bin ders sayfası eder; ~30 bini seçmeli havuz kopyalarıdır.
+2 istek/sn ile bu 5+ saat sürer ve sunucu uzun taramada 503 dönmeye başlayabilir. Önerilen sıra:
+önce `scrape -l lisans --skip-pool-details` (programlar, planlar, kendi dersleri), sonra ihtiyaç olursa
+`scrape -l lisans --fresh-within 48h` ile havuz detaylarını (tercihen gece, `--rps 1`) tamamlamak.
 
 ## Veri modeli
 
@@ -60,9 +67,8 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
   Ders planı ve dersin alt tabloları her yazımda **değiştirilir** (plandan çıkan ders ilişkisi silinir).
 - Bir ders birden çok programın planında olabilir (`program_courses`); detay sayfası bir çalışmada
   yalnızca bir kez indirilir. `courses.program_id` dersin sahibidir ve katkı matrisi o programın çıktılarına bağlanır.
-  Seçmeli havuz dersleri (çoğu "ORTAK SEÇMELİ DERSLER" programına ait) planında göründükleri programa
-  **sahiplendirilmez**: sayfalarındaki P1…Pn o programın çıktılarıdır. Sahibi aynı taramadaysa ders onunla
-  indirilir; değilse tarama sonunda sahipsiz (`program_id IS NULL`) indirilir ve katkıları bağlanmaz.
+  OİBS seçmeli havuz derslerini (ör. OSD GÜZ2) her programın planına **ayrı kopya** (ayrı `curCourse`) olarak koyar;
+  sayfalarındaki P1…Pn o programın çıktılarıdır, bu yüzden havuz dersleri de planında göründükleri programa aittir.
 - Sitede boş olan katkı hücreleri ("katkı yok") satır olarak yazılmaz.
 - Seçmeli dersler iki katmanlıdır: grup satırı (`program_courses.is_elective_group`, kaç ders
   seçileceği `group_course_count`, ör. "NORMAL EĞİTİM PAKETİ" → 5) ve ona `elective_group_id` ile
