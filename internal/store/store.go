@@ -218,8 +218,8 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 		err := tx.QueryRow(ctx, `
 			INSERT INTO courses (id, program_id, code, name, semester, theory_hours, practice_hours, credit, ects,
 				language, level, department, delivery_mode, course_type, objective, content, prerequisites,
-				coordinator, instructors, assistants, details, source_url, detail_scraped_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22, now())
+				coordinator, instructors, assistants, details, source_url, teaching_mode, detail_scraped_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23, now())
 			ON CONFLICT (id) DO UPDATE SET
 				program_id     = COALESCE(courses.program_id, EXCLUDED.program_id),
 				code           = COALESCE(EXCLUDED.code, courses.code),
@@ -233,19 +233,19 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 				delivery_mode = EXCLUDED.delivery_mode, course_type = EXCLUDED.course_type,
 				objective = EXCLUDED.objective, content = EXCLUDED.content, prerequisites = EXCLUDED.prerequisites,
 				coordinator = EXCLUDED.coordinator, instructors = EXCLUDED.instructors, assistants = EXCLUDED.assistants,
-				details = EXCLUDED.details, source_url = EXCLUDED.source_url,
+				details = EXCLUDED.details, source_url = EXCLUDED.source_url, teaching_mode = EXCLUDED.teaching_mode,
 				detail_scraped_at = now(), updated_at = now()
 			RETURNING program_id`,
 			courseID, programID, nz(d.Code), nz(d.Name), d.Semester, d.Theory, d.Practice, d.Credit, d.ECTS,
 			nz(d.Language), nz(d.Level), nz(d.Department), nz(d.DeliveryMode), nz(d.Type), nz(d.Objective),
 			nz(d.Content), nz(d.Prerequisites), nz(d.Coordinator), nz(d.Instructors), nz(d.Assistants),
-			d.Details, nz(url)).Scan(&owner)
+			d.Details, nz(url), nz(d.TeachingMode)).Scan(&owner)
 		if err != nil {
 			return fmt.Errorf("course upsert: %w", err)
 		}
 
 		for _, t := range []string{"course_learning_outcomes", "course_weekly_topics", "course_resources",
-			"course_assessments", "course_workloads", "course_program_outcomes"} {
+			"course_assessments", "course_workloads", "course_program_outcomes", "course_outcome_matrix"} {
 			if _, err := tx.Exec(ctx, "DELETE FROM "+t+" WHERE course_id = $1", courseID); err != nil {
 				return err
 			}
@@ -257,8 +257,8 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 				courseID, i, lo.No, nz(lo.Description), nz(lo.Extra))
 		}
 		for i, w := range d.WeeklyTopics {
-			b.Queue(`INSERT INTO course_weekly_topics (course_id, ordinal, week, topic, preparation) VALUES ($1,$2,$3,$4,$5)`,
-				courseID, i, w.Week, nz(w.Topic), nz(w.Preparation))
+			b.Queue(`INSERT INTO course_weekly_topics (course_id, ordinal, week, topic, preparation, documents) VALUES ($1,$2,$3,$4,$5,$6)`,
+				courseID, i, w.Week, nz(w.Topic), nz(w.Preparation), nz(w.Documents))
 		}
 		for i, r := range d.Resources {
 			b.Queue(`INSERT INTO course_resources (course_id, ordinal, kind, content) VALUES ($1,$2,$3,$4)`,
@@ -281,6 +281,15 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 					SELECT $1, id, $4 FROM program_outcomes WHERE program_id = $2 AND no = $3
 					ON CONFLICT (course_id, program_outcome_id) DO UPDATE SET contribution = EXCLUDED.contribution`,
 					courseID, *owner, oc.No, oc.Level)
+			}
+			for _, m := range d.OutcomeMatrix {
+				// PÇ satırı yukarıda (ProgramOutcomes) oluşturulmadıysa da boş açıklamayla oluşsun.
+				b.Queue(upsertOutcomeSQL, *owner, m.PO, nil, SourceCourseMatrix, sourcePriority(SourceCourseMatrix))
+				b.Queue(`
+					INSERT INTO course_outcome_matrix (course_id, lo_no, program_outcome_id, contribution)
+					SELECT $1, $2, id, $5 FROM program_outcomes WHERE program_id = $3 AND no = $4
+					ON CONFLICT (course_id, lo_no, program_outcome_id) DO UPDATE SET contribution = EXCLUDED.contribution`,
+					courseID, m.LO, *owner, m.PO, m.Level)
 			}
 		}
 		return tx.SendBatch(ctx, b).Close()
@@ -314,7 +323,7 @@ type TableCount struct {
 func (s *Store) Stats(ctx context.Context) ([]TableCount, error) {
 	tables := []string{"units", "programs", "program_outcomes", "courses", "program_courses",
 		"course_learning_outcomes", "course_weekly_topics", "course_resources", "course_assessments",
-		"course_workloads", "course_program_outcomes", "scrape_runs", "scrape_errors"}
+		"course_workloads", "course_program_outcomes", "course_outcome_matrix", "scrape_runs", "scrape_errors"}
 	var out []TableCount
 	for _, t := range tables {
 		var n int64

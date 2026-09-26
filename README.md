@@ -69,7 +69,9 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
   Resmî çıktı sayfası geldiğinde metinden tahmin edilip listede olmayan maddeler silinir.
 - Katkı matrisi üç düzende okunur: `No | Çıktı | Düzey`, `No | Çıktı | 1..5 (X işaretli)` ve yatay `PÇ1 | PÇ2 | …` (ÖÇ×PÇ ise her PÇ için en yüksek düzey).
 - Tanınmayan bölümler kaybolmaz: `programs.sections`, `programs.info`, `courses.details` (JSONB).
-- Hazır view'lar: `v_curriculum`, `v_course_outcome_matrix`. Hatalar: `scrape_errors`.
+- Ders ↔ program çıktısı katkısı iki düzeyde tutulur: `course_outcome_matrix` sitedeki ÖÇ×PÇ matrisinin
+  tamamı (hangi öğrenme çıktısı hangi PÇ'ye ne katkı veriyor), `course_program_outcomes` PÇ başına en yüksek düzey.
+- Hazır view'lar: `v_curriculum`, `v_course_outcome_matrix`, `v_course_lo_po_matrix`. Hatalar: `scrape_errors`.
 
 ## Gerçek siteye dair notlar
 
@@ -99,8 +101,9 @@ make lint
 CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
 
 `internal/parse/testdata/real/` gerçek OİBS sayfalarıdır (Bilgisayar Mühendisliği, 1371; ViewState
-kırpıldı). Program bilgisi, ders planı ve program yeterlilikleri parser'ları bunlara karşı test edilir.
-Diğer fixture'lar sentetiktir; ders detayı sayfası henüz gerçek sayfayla doğrulanmadı.
+kırpıldı). Dört sayfa türünün (program bilgisi, program yeterlilikleri, ders planı, ders detayı)
+parser'ları bunlara karşı test edilir; kök dizindeki diğer fixture'lar sentetik uç durumlardır.
+Keşif sayfası (unitSelection) için henüz gerçek fixture yok.
 Yeni gerçek sayfa eklemek için:
 >
 > ```bash

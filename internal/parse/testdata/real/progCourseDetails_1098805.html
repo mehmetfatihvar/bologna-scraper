@@ -1,0 +1,719 @@
+
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr" xml:lang="tr">
+<head><title>
+
+</title><meta http-equiv="x-ua-compatible" content="ie=edge" /><meta content="width=device-width, initial-scale=1" name="viewport" /><meta name="robots" content="noindex,nofollow" /><meta name="googlebot" content="noindex" /><link href="../proliz_boots4/bootstrap/css/bootstrap.min.css" rel="stylesheet" /><link href="prolizcss/prolizbologna_v2.css" rel="stylesheet" />
+    <style>
+        td, th {
+            padding-left: 3px !important
+        }
+
+        .grdHeaderCenter {
+            text-align: center;
+        }
+        
+        .tableZeroSpace th, td {
+            padding: 2px 1px;
+        }
+
+    </style>
+    <link href="../proliz_boots4/prolizcodes/css/Sdka/Sdka.css" rel="stylesheet" /><link href="../App_Themes/oibs21/oibs21.css" type="text/css" rel="stylesheet" /><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/jquery-ui/jquery-ui.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/fontawesome/css/all.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/select2/css/select2.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/sweetalert2/sweetalert2.min.css"></link></head>
+<body>
+    <form method="post" action="./progCourseDetails.aspx?curCourse=1098805&amp;lang=tr" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="" />
+
+
+<script src="/oibs/proliz_boots4/jquery/jquery-3.7.1.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/jquery-ui/jquery-ui.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/sweetalert2/sweetalert2.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/select2/js/select2.min.js" type="text/javascript"></script>
+<script src="/oibs/utils/ModalPopupWindow_v25_min.js" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+
+        (function () {
+            // 1) Anahtari hemen sil ki refresh() bos stack gorsun (flash olmasin).
+            try { sessionStorage.removeItem("BootsModalV2::" + (location.pathname || "") + "::stack"); } catch (e) {}
+            // 2) Kutuphane hazirsa da kapatma cagrisi yap (refresh zaten actiysa kapatir).
+            function doReset() {
+                if (window.BootsModalV2 && window.BootsModalV2.reset) {
+                    window.BootsModalV2.reset();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', doReset);
+            } else {
+                doReset();
+            }
+        })();
+        (function () {
+            // 1) Anahtari hemen sil ki refresh() bos liste gorsun (flash olmasin).
+            try { sessionStorage.removeItem("BootsOffCanvas::" + (location.pathname || "") + "::open"); } catch (e) {}
+            // 2) Kutuphane hazirsa kapatma cagrisi da yap (refresh zaten actiysa kapatir).
+            function doReset() {
+                if (window.BootsOffCanvas && window.BootsOffCanvas.reset) {
+                    window.BootsOffCanvas.reset();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', doReset);
+            } else {
+                doReset();
+            }
+        })();//]]>
+</script>
+
+<script src="/oibs/ScriptResource.axd?d=NJmAwtEo3Ipnlaxl6CMhvmVU60FEzIEbUct2i2TO3JUdWQqfy1WLu_4xSZCt-TRXcCMv3qcH8yrrkRzjnhcxCEsDORbjKPrcLG7WA2uAqj9nCwmd3n7q5a5VOMJpOfkwzucJqr2rGJsCFxV-YkwSJDzPiFpbiUTNoYh27siGBX01&amp;t=ffffffffbec1863d" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="B7B1526A" />
+<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+        
+        <div id="UpdatePanel1">
+	
+                <div class="panel panel-default p-1">
+                    <div class="panel-heading">
+                        <span id="lblDersBilgileri_h">Dersin Ayrıntıları</span>
+                        <a id="btnYazdir" title="Yazdır" class="btn btn-default btn-xs" data-ak="y" href="javascript:__doPostBack(&#39;btnYazdir&#39;,&#39;&#39;)" style="display:inline-block;"><font face="Open Sans" color="#5B636A" size="2"><i style="padding-left:3px;font-size:16px" class="fal fa-print text-info"></i></font></a>
+                    </div>
+                    <div>
+		<table class="ProlizMGrid" cellspacing="0" rules="rows" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="1" border="1" id="grdDers" width="100%">
+			<tr>
+				<th scope="col" style="padding:2px;"><font face="Open Sans" size="1">Yarıyıl</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">Kodu</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">Adı</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">T+U+L</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">Kredi</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">AKTS</font></th><th scope="col" style="padding:2px;"><font face="Open Sans" size="1">Son G&#252;ncelleme Tarihi</font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Yarıyıl" style="padding:3px;"><font face="Open Sans" size="1">1</font></td><td class="gv-mobile-cell" data-label="Kodu" style="padding:3px;"><font face="Open Sans" size="1">1551014</font></td><td class="gv-mobile-cell" data-label="Adı" style="padding:3px;"><font face="Open Sans" size="1">PROGRAMLAMAYA GİRİŞ I</font></td><td class="gv-mobile-cell" data-label="T+U+L" style="padding:3px;"><font face="Open Sans" size="1">3+2+0</font></td><td class="gv-mobile-cell" data-label="Kredi" style="padding:3px;"><font face="Open Sans" size="1">4</font></td><td class="gv-mobile-cell" data-label="AKTS" style="padding:3px;"><font face="Open Sans" size="1">5</font></td><td class="gv-mobile-cell" data-label="Son Güncelleme Tarihi" style="padding:3px;"><font face="Open Sans" size="1">16.06.2026</font></td>
+			</tr>
+		</table>
+	</div>
+                    
+                </div>
+                <br />
+                &nbsp;
+           
+                <table id="dlDers" cellspacing="0" width="100%">
+		<tr>
+			<td><font size="2">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <span id="dlDers_lblDersDetayHeader_0">Dersin Detayları</span>
+                            </div>
+                            <table class="table table-hover" style="width: 100%">
+                                <tr>
+                                    <td style="width: 15%">
+                                        <span id="dlDers_DILLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Dili</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DILLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Türkçe</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_DUZEYLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Düzeyi</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_Label6_0"><font face="Open Sans" color="#3A3A3A" size="1">Lisans</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_BOLPROGLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Bölümü / Programı</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_Label7_0"><font face="Open Sans" color="#3A3A3A" size="1">BİLGİSAYAR MÜHENDİSLİĞİ</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_OGRENIMTURLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Öğrenim Türü</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_Label5_0"><font face="Open Sans" color="#3A3A3A" size="1">Örgün Öğretim</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_TURLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Türü</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_TURLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Zorunlu</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="bottom_dotted" style="height: 13px">
+                                        <span id="dlDers_OGRETIM_SEKLILabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Öğretim Şekli</font></span>
+                                    </td>
+                                    <td class="bottom_dotted" style="height: 13px">
+                                        <span id="dlDers_OGRETIM_SEKLILabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Yüz Yüze</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_AMACLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Amacı</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_AMACLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Bu ders, programlama konusunda herhangi bir bilgisi olmayan kişilere C dili ile programlama tekniklerini anlatır. Bu dersin amacı, bilgisayar programlaması ile ilgili genel kavramları ortaya koymak, algoritma kavramı, algoritmaların nasıl oluşturulacağı ve yapısal programlama konusuna değinmektir.</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_ICERIKLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin İçeriği</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_ICERIKLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">C Dilinin Temelleri ve Kavramlar, Algoritma, Akış Şeması, Atama ve Girdi/Çıktı Komutları, Seçme Komutları, Döngü Komutları, Fonksiyonlar, İşaretçiler</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_YONTEMTEKNIKLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Yöntem ve Teknikleri</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_YONTEMTEKNIKLabel_0"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span id="dlDers_DERS_ONKOSULLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Ön Koşulları</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_ONKOSULLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Yok</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_KOORDINATORLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Koordinatörü</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_KOORDINATORLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Yok</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_VERENLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersi Verenler</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_VERENLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Dr. Öğretim Üyesi Mehmet ACI</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_YARDIMCILabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Yardımcıları</font></span>
+                                    </td>
+                                    <td class="bottom_dotted">
+                                        <span id="dlDers_DERS_YARDIMCILabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Yok</font></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="bottom_dotted" style="height: 13px">
+                                        <span id="dlDers_STAJ_VARMILabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Dersin Staj Durumu</font></span>
+                                    </td>
+                                    <td class="bottom_dotted" style="height: 13px">
+                                        <span id="dlDers_STAJ_VARMILabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Yok</font></span>
+                                    </td>
+                                </tr>
+
+                            </table>
+                        </div>
+                        <br />
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <span id="dlDers_lblDersKaynaklari_h_0">Ders Kaynakları</span>
+                            </div>
+                            <table class="table" style="width: 100%">
+                                <tr>
+                                    <td style="width: 15%">
+                                        <span id="dlDers_KAYNAKLARLabelh_0"><font face="Open Sans" color="#3A3A3A" size="1">Kaynaklar</font></span>
+                                    </td>
+                                    <td>
+                                        <span id="dlDers_KAYNAKLARLabel_0"><font face="Open Sans" color="#3A3A3A" size="1">Çağıltay N.E., Selbes F.C., Tokdemir G., Turhan Ç., C Dersi: Programlamaya Giriş, Ankara, Türkiye, 2010, Seçkin Yayıncılık<BR>Selbes, C. F, Tokdemir, G, Turhan, C, Cağiltay, N.E. C Dersi Çözümlü Problem Kitabı, Türkiye, 2008, Seçkin Yayıncılık</font></span>
+                                    </td>
+                                </tr>
+                                
+                                
+                                
+                                
+                            </table>
+                        </div>
+                        <br />
+                        
+                    </font></td>
+		</tr>
+	</table>
+                <br />
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <span id="lblPlanlananOgrAktivite_h">Planlanan Öğrenme Aktiviteleri ve Metodları</span>
+                    </div>
+                    <span id="lblPlanlananOgrAktivite"><font face="Open Sans" color="#3A3A3A" size="1">Etkinlikler ayrıntılı olarak "Değerlendirme" ve "İş Yükü Hesaplaması" bölümlerinde verilmiştir.</font></span><br />
+                </div>
+                <br />
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <span id="lblDegerlendirmeOlcutleri_h">Değerlendirme Ölçütleri</span>
+                    </div>
+                    <div>
+		<table class="ProlizMGrid" cellspacing="0" rules="all" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="2" border="1" id="grd_degerlendirme" width="100%">
+			<tr>
+				<th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Calisma_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Yarıyıl Çalışmaları</font></span>
+                                </font></th><th class="grdHeaderRight" align="left" scope="col" width="50" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Sayi_h" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Sayısı</font></span>
+                                </font></th><th class="grdHeaderRight" scope="col" width="70" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Katki_h" style="display:inline-block;text-align: right; font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Katkı</font></span>
+                                </font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Çalışma" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblCalismaTip_0" title="1"><font face="Open Sans" color="#3A3A3A" size="1">Ara Sınav</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Sayi_0"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Katkı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_Label124_0"><font face="Open Sans" color="#3A3A3A" size="1">%</font></span>
+                                    <span id="grd_degerlendirme_lblDS_Katki_0"><font face="Open Sans" color="#3A3A3A" size="1">40</font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Çalışma" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblCalismaTip_1" title="9"><font face="Open Sans" color="#3A3A3A" size="1">Yarıyıl Sonu Sınavı</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Sayi_1"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Katkı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_Label124_1"><font face="Open Sans" color="#3A3A3A" size="1">%</font></span>
+                                    <span id="grd_degerlendirme_lblDS_Katki_1"><font face="Open Sans" color="#3A3A3A" size="1">60</font></span>
+                                </font></td>
+			</tr><tr>
+				<td style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_degerlendirme_lblDS_Top_h" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Toplam :</font></span>
+                                </font></td><td style="padding:3px;"><font face="Open Sans" size="1">
+                                    <div style="width: 90%; text-align: right">
+                                        <span id="grd_degerlendirme_lblDS_Top_Sayi" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                    </div>
+                                </font></td><td style="padding:3px;"><font face="Open Sans" size="1">
+                                    <div style="width: 90%; text-align: right">
+                                        <span id="grd_degerlendirme_Label4" style="font-size: 9pt; font-family: Tahoma; text-align: right;"><font face="Open Sans" color="#3A3A3A" size="1">%</font></span>
+                                        <span id="grd_degerlendirme_lblDS_Top_Katki" style="font-size: 9pt; font-family: Tahoma; text-align: right;"><font face="Open Sans" color="#3A3A3A" size="1">100</font></span>
+                                    </div>
+                                </font></td>
+			</tr>
+		</table>
+	</div>
+                    
+                </div>
+                <br />
+                &nbsp;
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <span id="lblAKTS_hesaplamaicerigi_h">AKTS Hesaplama İçeriği</span>
+                    </div>
+                    <div>
+		<table class="ProlizMGrid" cellspacing="0" rules="all" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="5" border="1" id="grd_akts" width="100%">
+			<tr>
+				<th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Etkinlik_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">İş Yükü</font></span>
+                                </font></th><th class="grdHeaderRight" align="left" scope="col" width="50" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Sayi_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Sayısı</font></span>
+                                </font></th><th class="grdHeaderRight" align="left" scope="col" width="50" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Sure_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Süre</font></span>
+                                </font></th><th class="bottom_dotted" scope="col" width="100" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_h" style="display:inline-block;font-size: 9pt; font-family: Tahoma; text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">Toplam İş Yükü (Saat)</font></span>
+                                </font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="İş Yükü" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblEtkinlikTip_0" title="1"><font face="Open Sans" color="#3A3A3A" size="1">Ders Süresi</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sayi_0"><font face="Open Sans" color="#3A3A3A" size="1">14</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Süresi" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sure_0"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Toplam İş Yükü(Saat)" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_0" style="display:inline-block;text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">42</font></span>
+                                    
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="İş Yükü" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblEtkinlikTip_1" title="2"><font face="Open Sans" color="#3A3A3A" size="1">Sınıf Dışı Ç. Süresi</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sayi_1"><font face="Open Sans" color="#3A3A3A" size="1">14</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Süresi" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sure_1"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Toplam İş Yükü(Saat)" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_1" style="display:inline-block;text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">28</font></span>
+                                    
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="İş Yükü" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblEtkinlikTip_2" title="5"><font face="Open Sans" color="#3A3A3A" size="1">Ara Sınavlar</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sayi_2"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Süresi" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sure_2"><font face="Open Sans" color="#3A3A3A" size="1">15</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Toplam İş Yükü(Saat)" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_2" style="display:inline-block;text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">15</font></span>
+                                    
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="İş Yükü" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblEtkinlikTip_3" title="6"><font face="Open Sans" color="#3A3A3A" size="1">Uygulama</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sayi_3"><font face="Open Sans" color="#3A3A3A" size="1">14</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Süresi" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sure_3"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Toplam İş Yükü(Saat)" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_3" style="display:inline-block;text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">28</font></span>
+                                    
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="İş Yükü" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblEtkinlikTip_4" title="9"><font face="Open Sans" color="#3A3A3A" size="1">Yarıyıl Sonu Sınavı</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Sayısı" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sayi_4"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="right" data-label="Süresi" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_txtAKTS_Sure_4"><font face="Open Sans" color="#3A3A3A" size="1">15</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Toplam İş Yükü(Saat)" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Carpim_4" style="display:inline-block;text-align: right"><font face="Open Sans" color="#3A3A3A" size="1">15</font></span>
+                                    
+                                </font></td>
+			</tr><tr>
+				<td style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grd_akts_lblAKTS_Top_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Toplam İş Yükü</font></span>
+                                </font></td><td style="padding:3px;"><font face="Open Sans" size="1">&nbsp;</font></td><td style="padding:3px;"><font face="Open Sans" size="1">
+                                </font></td><td style="padding:3px;"><font face="Open Sans" size="1">
+                                    
+                                    <span id="grd_akts_lblAKTS_Sonuc_h" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">AKTS Kredisi : </font></span><span id="grd_akts_lblAKTS_Sonuc" style="font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">5</font></span>
+                                    <span id="grd_akts_lblAKTS_Top" style="display:inline-block;font-size: 9pt; font-family: Tahoma; text-align: right;"><font face="Open Sans" color="#3A3A3A" size="1">128</font></span>
+                                </font></td>
+			</tr>
+		</table>
+	</div>
+                    
+                </div>
+                <br />
+                &nbsp;
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <span id="lblDersinOgrenmeCiktilari">Dersin Öğrenme Çıktıları: Bu dersin başarılı bir şekilde tamamlanmasıyla öğrenciler şunları yapabileceklerdir:</span>
+                </div>
+                <div>
+		<table class="ProlizMGrid" cellspacing="0" rules="all" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="3" border="1" id="grdOgrenmeCiktilari" width="100%" style="font-size: 9pt; font-family: Tahoma">
+			<tr>
+				<th class="bottom_dotted" align="left" scope="col" width="50" style="padding:2px;"><font face="Open Sans" size="1">Sıra No</font></th><th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">A&#231;ıklama</font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Sıra No" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdOgrenmeCiktilari_Label1Grd1_0"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Açıklama" style="padding:3px;"><font face="Open Sans" size="1">C dili ile temel d&#252;zeyde kodlama yapar</font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Sıra No" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdOgrenmeCiktilari_Label1Grd1_1"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Açıklama" style="padding:3px;"><font face="Open Sans" size="1">Kontrol ve d&#246;ng&#252; yapılarını tasarlar</font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Sıra No" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdOgrenmeCiktilari_Label1Grd1_2"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Açıklama" style="padding:3px;"><font face="Open Sans" size="1">Fonksiyonları tasarlar</font></td>
+			</tr>
+		</table>
+	</div>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                </div>
+                <br />
+                &nbsp;
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <span id="lblDersKonulari_h">Ders Konuları</span>
+                    </div>
+                    <div>
+		<table class="ProlizMGrid" cellspacing="0" rules="all" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="15" border="1" id="grdDersKonu" width="100%">
+			<tr>
+				<th class="bottom_dotted" align="left" scope="col" width="50" style="padding:2px;"><font face="Open Sans" size="1">Hafta</font></th><th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">Konu</font></th><th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">Ön Hazırlık</font></th><th class="bottom_dotted" align="left" scope="col" style="padding:2px;"><font face="Open Sans" size="1">Dökümanlar</font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">1</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_0"><font face="Open Sans" color="#3A3A3A" size="1">Genel Kavramlar (Bilgisayarın Temel Birimleri, Bilgi Saklama, C Dili)</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_0"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_0"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">2</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_1"><font face="Open Sans" color="#3A3A3A" size="1">Algoritma, Akış Şeması </font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_1"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_1"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">3</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_2"><font face="Open Sans" color="#3A3A3A" size="1">C Dilinin Temelleri, Atama ve Girdi/Çıktı Komutları, Operatörler, İsim Sabitleri</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_2"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_2"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">4</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_3"><font face="Open Sans" color="#3A3A3A" size="1">Veri Tipi Dönüşümü, Matematik Kütüphanesi, Koşul İfadesi, if Komutu</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_3"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_3"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">5</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_4"><font face="Open Sans" color="#3A3A3A" size="1">Bileşik Komut, İçiçe if Komutu, if-else Eşleşmesi,</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_4"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_4"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">6</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_5"><font face="Open Sans" color="#3A3A3A" size="1">Soru İşareti Operatörü, Switch Komutu</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_5"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_5"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">7</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_6"><font face="Open Sans" color="#3A3A3A" size="1">Ara Sınav</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_6"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_6"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">8</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_7"><font face="Open Sans" color="#3A3A3A" size="1">While Komutu, Bileşik Atama</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_7"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_7"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">9</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_8"><font face="Open Sans" color="#3A3A3A" size="1">Arttırma ve Azaltma Operatörleri, for Komutu, do-while Komutu</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_8"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_8"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">10</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_9"><font face="Open Sans" color="#3A3A3A" size="1">İçiçe Döngüler, break ve continue Komutları</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_9"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_9"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">11</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_10"><font face="Open Sans" color="#3A3A3A" size="1">Fonksiyon Tanımı, Değer Döndürmeyen Fonksiyonlar</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_10"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_10"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">12</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_11"><font face="Open Sans" color="#3A3A3A" size="1">Değer Döndüren Fonksiyonlar, Çok Parametreli Fonksiyonlar, Değişken Kapsamları</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_11"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_11"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">13</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_12"><font face="Open Sans" color="#3A3A3A" size="1">Çok Fonksiyonlu Programlar, Özyinelemeli (Rekürsif) Fonksiyonlar</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_12"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_12"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">14</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_13"><font face="Open Sans" color="#3A3A3A" size="1">İşaretçi Tanımı, İşaretçi Operatörleri, İşaretçi Okutmak ve Yazdırmak, Fonksiyon Parametresi olan İşaretçiler</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_13"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_13"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" data-label="Hafta" style="padding:3px;"><font face="Open Sans" size="1">15</font></td><td class="gv-mobile-cell" data-label="Konu" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label1Grd5_14"><font face="Open Sans" color="#3A3A3A" size="1">DÖNEM SONU SINAVI</font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Ön Hazırlık" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label2_14"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" data-label="Dökümanlar" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdDersKonu_Label3_14"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr>
+		</table>
+	</div>
+                    
+                </div>
+                <br />
+                &nbsp;
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        
+                    </div>
+                    
+                    
+                </div>
+            
+            <div id="divSdka" class="panel panel-default">
+                <div class="panel-heading">
+                    <span id="lblSdka">Sürdürülebilir Kalkınma Amaçları</span>
+                </div>
+                <input type="hidden" name="txtSelectedKalkinmaAmac" id="txtSelectedKalkinmaAmac" value="9" />
+                <div id="selectedSDGsContainer" class="selected-sdgs"></div>
+            </div>
+               
+            <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <span id="lblDersProgCiktiKatki_h">Dersin Program Çıktılarına Katkısı</span>
+                    </div>
+                    <div>
+		<table class="ProlizMGrid" cellspacing="0" align="Left" rules="all" grdinit_0="0" grdinit_dee="False" grdinit_dsa="False" grdinit_dsm="False" grdinit_ds_cnt="4" border="1" id="grdProgCiktiKatki" width="100%" style="font-size: 9pt; font-family: Tahoma">
+			<tr>
+				<th class="bottom_right_dotted" align="left" scope="col" width="45" style="padding:2px;"><font face="Open Sans" size="1"><a href="javascript:__doPostBack(&#39;grdProgCiktiKatki&#39;,&#39;Sort$SIRA&#39;)"></a></font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP1" title="Matematik, fen bilimleri ve bilgisayar mühendisliği alanlarına özgü konularda yeterli bilgi birikimi; bu alanlardaki kuramsal ve uygulamalı bilgileri, bilgisayar mühendisliği alanındaki karmaşık mühendislik problemlerinin çözümünde kullanabilme becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P1</font></span>
+                                    
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP2" title="Bilgisayar mühendisliği alanındaki karmaşık mühendislik problemlerini saptama, tanımlama, formüle etme ve çözme becerisi; bu amaçla uygun analiz, teknik ve modelleme yöntemlerini seçme ve uygulama becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P2</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP3" title="Bilgisayar mühendisliği kapsamındaki karmaşık bir sistemi, süreci, cihazı veya ürünü gerçekçi kısıtlar ve koşullar altında, belirli gereksinimleri karşılayacak şekilde bilgisayar mühendisliği alanındaki modern tasarım yöntemlerini uygulayarak tasarlama becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P3</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP4" title="Bilgisayar mühendisliği uygulamalarında karşılaşılan karmaşık problemlerin analizi ve çözümü için gerekli olan modern teknik ve araçları geliştirme, seçme ve kullanma becerisi; bilişim teknolojilerini etkin bir şekilde kullanma becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P4</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP5" title="Bilgisayar mühendisliği disiplinine özgü karmaşık problemlerin veya araştırma konularının incelenmesi için deney tasarlama, deney yapma, veri toplama, sonuçları analiz etme ve yorumlama becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P5</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP6" title="Disiplin içi ve çok disiplinli takımlarda etkin biçimde çalışabilme becerisi; bireysel çalışma becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P6</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP7" title="Türkçe sözlü ve yazılı etkin iletişim kurma becerisi; en az bir yabancı dil bilgisi; etkin rapor yazma ve yazılı raporları anlama, tasarım ve üretim raporları hazırlayabilme, etkin sunum yapabilme, açık ve anlaşılır talimat verme ve alma becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P7</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP8" title="Yaşam boyu öğrenmenin gerekliliği bilinci; bilgiye erişebilme, bilim ve teknolojideki gelişmeleri izleme ve kendini sürekli yenileme becerisi."><font face="Open Sans" color="#3A3A3A" size="1">P8</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP9" title="Etik ilkelerine uygun davranma, meslekî ve etik sorumluluk bilinci; bilgisayar mühendisliği alanındaki mühendislik uygulamalarında kullanılan standartlar hakkında bilgi."><font face="Open Sans" color="#3A3A3A" size="1">P9</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP10" title="Bilgisayar mühendisliği alanında proje yönetimi, risk yönetimi ve değişiklik yönetimi gibi, iş hayatındaki uygulamalar hakkında bilgi; girişimcilik, yenilikçilik hakkında farkındalık; sürdürülebilir kalkınma hakkında bilgi."><font face="Open Sans" color="#3A3A3A" size="1">P10</font></span>
+                                </font></th><th class="grdHeaderCenter" align="center" scope="col" style="padding:2px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblHP11" title="Bilgisayar mühendisliği alanındaki mühendislik uygulamalarının evrensel ve toplumsal boyutlarda sağlık, çevre ve güvenlik üzerindeki etkileri ve çağın bilgisayar mühendisliği alanına yansıyan sorunları hakkında bilgi; bilgisayar mühendisliği çözümlerinin hukuksal sonuçları hakkında farkındalık."><font face="Open Sans" color="#3A3A3A" size="1">P11</font></span>
+                                </font></th>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" align="left" data-label="" bgcolor="#535456" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblSira_1" title="C dili ile temel düzeyde kodlama yapar" class="text-white"><font face="Open Sans" color="#3A3A3A" size="1">Ö1</font></span>
+                                    
+                                    
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P1" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP1_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P2" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP2_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P3" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP3_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P4" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP4_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P5" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP5_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P6" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP6_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P7" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP7_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P8" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP8_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">1</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P9" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP9_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P10" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP10_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P11" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP11_1" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" align="left" data-label="" bgcolor="#535456" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblSira_2" title="Kontrol ve döngü yapılarını tasarlar" class="text-white"><font face="Open Sans" color="#3A3A3A" size="1">Ö2</font></span>
+                                    
+                                    
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P1" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP1_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P2" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP2_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P3" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP3_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P4" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP4_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P5" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP5_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P6" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP6_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P7" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP7_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P8" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP8_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P9" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP9_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P10" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP10_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P11" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP11_2" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr><tr class="ProlizMGrid-row">
+				<td class="gv-mobile-cell" align="left" data-label="" bgcolor="#535456" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblSira_3" title="Fonksiyonları tasarlar" class="text-white"><font face="Open Sans" color="#3A3A3A" size="1">Ö3</font></span>
+                                    
+                                    
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P1" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP1_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P2" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP2_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P3" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP3_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P4" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP4_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P5" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP5_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P6" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP6_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">3</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P7" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP7_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P8" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP8_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P9" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP9_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">2</font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P10" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP10_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td><td class="gv-mobile-cell" align="center" data-label="P11" style="padding:3px;"><font face="Open Sans" size="1">
+                                    <span id="grdProgCiktiKatki_lblP11_3" style="display:inline-block;font-size: 9pt; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1"></font></span>
+                                </font></td>
+			</tr>
+		</table>
+	</div>
+                    <br />
+                    &nbsp;
+                    <span id="lblKatkiDuzeyAciklama" style="font-size: 9pt; color: navy; font-family: Tahoma"><font face="Open Sans" color="#3A3A3A" size="1">Katkı Düzeyi:  1: Çok Düşük  2: Düşük  3: Orta  4: Yüksek  5: Çok Yüksek</font></span>
+                    
+                </div>
+                <br />
+                &nbsp;&nbsp;<br />
+                &nbsp;
+                
+            
+</div>
+    <script src="../proliz_boots4/prolizcodes/js/Sdka/Sdka.js"></script>
+    <script type="text/javascript">
+        (function () {
+            try {
+                if (window.parent && window.parent !== window && typeof window.parent.prolizBolognaSaveChildFrameUrl === 'function') {
+                    window.parent.prolizBolognaSaveChildFrameUrl(window.location.href);
+                }
+            } catch (e) { }
+        })();
+    </script>
+    
+
+<script type="text/javascript">
+//<![CDATA[
+var baseUrl = '/oibs/';var modalWin = new CreateModalPopUpObject();updateSelectedSDGsDisplay();   //]]>
+</script>
+</form>
+</body>
+</html>

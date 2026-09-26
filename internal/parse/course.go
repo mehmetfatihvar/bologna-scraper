@@ -18,6 +18,7 @@ type WeeklyTopic struct {
 	Week        *int   `json:"week,omitempty"`
 	Topic       string `json:"topic"`
 	Preparation string `json:"preparation,omitempty"`
+	Documents   string `json:"documents,omitempty"`
 }
 
 type Resource struct {
@@ -45,6 +46,14 @@ type OutcomeContribution struct {
 	Level       *int   `json:"level,omitempty"`
 }
 
+// MatrixCell: dersin LO no'lu öğrenme çıktısının PO no'lu program çıktısına katkısı
+// (gerçek sayfadaki "Ö1 × P1" matrisi; boş hücreler yazılmaz).
+type MatrixCell struct {
+	LO    int `json:"lo"`
+	PO    int `json:"po"`
+	Level int `json:"level"`
+}
+
 type CourseDetail struct {
 	Semester      *int     `json:"semester,omitempty"`
 	Code          string   `json:"code,omitempty"`
@@ -56,7 +65,8 @@ type CourseDetail struct {
 	Language      string   `json:"language,omitempty"`
 	Level         string   `json:"level,omitempty"`
 	Department    string   `json:"department,omitempty"`
-	DeliveryMode  string   `json:"delivery_mode,omitempty"`
+	DeliveryMode  string   `json:"delivery_mode,omitempty"` // Öğrenim Türü: Örgün Öğretim …
+	TeachingMode  string   `json:"teaching_mode,omitempty"` // Dersin Öğretim Şekli: Yüz Yüze | Uzaktan …
 	Type          string   `json:"type,omitempty"`
 	Objective     string   `json:"objective,omitempty"`
 	Content       string   `json:"content,omitempty"`
@@ -72,9 +82,11 @@ type CourseDetail struct {
 	Assessments      []Assessment          `json:"assessments,omitempty"`
 	Workloads        []Workload            `json:"workloads,omitempty"`
 	ProgramOutcomes  []OutcomeContribution `json:"program_outcomes,omitempty"`
+	OutcomeMatrix    []MatrixCell          `json:"outcome_matrix,omitempty"`
 }
 
 var courseDetailRules = []sectionRule2{
+	{[]string{"ogretim sekli"}, func(c *CourseDetail, v string) { c.TeachingMode = v }},
 	{[]string{"ogrenim tur"}, func(c *CourseDetail, v string) { c.DeliveryMode = v }},
 	{[]string{"dersin tur"}, func(c *CourseDetail, v string) { c.Type = v }},
 	{[]string{"dili"}, func(c *CourseDetail, v string) { c.Language = v }},
@@ -116,7 +128,9 @@ func ParseCourseDetail(r io.Reader) (*CourseDetail, error) {
 
 		// 2) Program çıktılarıyla ilişki matrisi (öğrenme çıktılarından ÖNCE kontrol edilmeli)
 		case strings.Contains(n, "program") && (strings.Contains(n, "cikti") || strings.Contains(n, "yeterlil") || strings.Contains(n, "katki") || strings.Contains(n, "iliski")):
-			c.ProgramOutcomes = append(c.ProgramOutcomes, parseMatrix(t)...)
+			ocs, cells := parseMatrix(t)
+			c.ProgramOutcomes = append(c.ProgramOutcomes, ocs...)
+			c.OutcomeMatrix = append(c.OutcomeMatrix, cells...)
 
 		// 3) Dersin öğrenme çıktıları
 		case strings.Contains(n, "ogrenme cikti") || strings.Contains(n, "kazanim"):
@@ -126,8 +140,8 @@ func ParseCourseDetail(r io.Reader) (*CourseDetail, error) {
 		case strings.Contains(n, "haftalik") || strings.Contains(n, "konular") || strings.Contains(n, "ders akisi"):
 			c.WeeklyTopics = append(c.WeeklyTopics, parseWeekly(t)...)
 
-		// 5) İş yükü (değerlendirmeden önce: "AKTS İş Yükü Tablosu")
-		case strings.Contains(n, "is yuku") || strings.Contains(n, "isyuku"):
+		// 5) İş yükü (değerlendirmeden önce: "AKTS İş Yükü Tablosu" / gerçek sayfada "AKTS Hesaplama İçeriği")
+		case strings.Contains(n, "is yuku") || strings.Contains(n, "isyuku") || strings.Contains(n, "akts hesap"):
 			c.Workloads = append(c.Workloads, parseWorkload(t)...)
 
 		// 6) Değerlendirme sistemi
@@ -190,6 +204,12 @@ func parseSummary(t *Table, c *CourseDetail) {
 	c.Theory, c.Practice = SplitTU(get(func(h string) bool { return strings.HasPrefix(h, "t+u") }))
 	c.Credit = Float(get(func(h string) bool { return strings.Contains(h, "kredi") || strings.Contains(h, "credit") }))
 	c.ECTS = Float(get(func(h string) bool { return strings.Contains(h, "akts") || strings.Contains(h, "ects") }))
+	// Tanınsın tanınmasın özet satırının tümü (ör. "Son Güncelleme Tarihi") ham olarak da saklanır.
+	for i, h := range t.Rows[hi].Cells {
+		if k := Clean(h.Text); k != "" && row.Cell(i) != "" {
+			c.Details[k] = Clean(row.Cell(i))
+		}
+	}
 }
 
 func looksLikeKV(t *Table) bool {
@@ -221,6 +241,9 @@ func parseLearningOutcomes(t *Table) []LearningOutcome {
 }
 
 func parseWeekly(t *Table) []WeeklyTopic {
+	_, hdr := t.FindHeader("hafta", "konu", "week", "topic")
+	prepCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "hazirlik") || strings.Contains(h, "preparation") })
+	docCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "dokuman") || strings.Contains(h, "document") })
 	var out []WeeklyTopic
 	for _, r := range t.Rows {
 		if r.IsHeader() || len(r.Cells) < 2 {
@@ -231,10 +254,12 @@ func parseWeekly(t *Table) []WeeklyTopic {
 			continue
 		}
 		w := WeeklyTopic{Week: wk, Topic: Clean(r.Cell(1))}
-		if len(r.Cells) > 2 {
-			w.Preparation = Clean(strings.Join(r.Texts()[2:], " | "))
+		if prepCol >= 0 || docCol >= 0 {
+			w.Preparation, w.Documents = Clean(r.Cell(prepCol)), Clean(r.Cell(docCol))
+		} else if len(r.Cells) > 2 {
+			w.Preparation = joinNonEmpty(r.Texts()[2:], " | ")
 		}
-		if w.Topic != "" || w.Preparation != "" {
+		if w.Topic != "" || w.Preparation != "" || w.Documents != "" {
 			out = append(out, w)
 		}
 	}
@@ -299,7 +324,7 @@ func parseWorkload(t *Table) []Workload {
 	hi, hdr := t.FindHeader("sure", "sayi", "toplam", "saat")
 	countCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "sayi") || strings.Contains(h, "adet") })
 	hoursCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "sure") || strings.Contains(h, "saat") })
-	totalCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "toplam") || strings.Contains(h, "is yuku") })
+	totalCol := colIndex(hdr, func(h string) bool { return strings.Contains(h, "toplam") })
 	var out []Workload
 	for ri, r := range t.Rows {
 		if ri <= hi || len(r.Cells) < 2 || r.Cell(0) == "" || isTotalRow(r.Cell(0)) {
@@ -329,9 +354,9 @@ func parseWorkload(t *Table) []Workload {
 //	(b) No | Program Çıktısı | 1 | 2 | 3 | 4 | 5   (işaretli sütun = düzey)
 //	(c) yatay: başlık PÇ1 | PÇ2 | … , altında düzey satır(lar)ı (ör. ÖÇ×PÇ matrisi);
 //	    birden çok satır varsa her PÇ için en yüksek düzey alınır.
-func parseMatrix(t *Table) []OutcomeContribution {
-	if out, ok := parseWideMatrix(t); ok {
-		return out
+func parseMatrix(t *Table) ([]OutcomeContribution, []MatrixCell) {
+	if out, cells, ok := parseWideMatrix(t); ok {
+		return out, cells
 	}
 	hi, hdr := t.FindHeader("katki", "duzey", "no", "cikti", "1", "5")
 	levelCols := map[int]int{} // sütun -> düzey
@@ -378,13 +403,13 @@ func parseMatrix(t *Table) []OutcomeContribution {
 		}
 		out = append(out, oc)
 	}
-	return out
+	return out, nil
 }
 
 // reOutcomeHeader: "PÇ1", "PÖÇ 2", "PO3", "P.Ç.4" gibi yatay matris başlıkları.
 var reOutcomeHeader = regexp.MustCompile(`^p[a-z.]{0,4}\s*(\d{1,2})$`)
 
-func parseWideMatrix(t *Table) ([]OutcomeContribution, bool) {
+func parseWideMatrix(t *Table) ([]OutcomeContribution, []MatrixCell, bool) {
 	for hi, r := range t.Rows {
 		if hi > 3 {
 			break
@@ -410,12 +435,24 @@ func parseWideMatrix(t *Table) ([]OutcomeContribution, bool) {
 			}
 		}
 		// Başlık satırı ile veri satırlarının hücre sayısı farklıysa (ör. köşe hücresi yok) sağdan hizala.
+		var cells []MatrixCell
 		for _, row := range t.Rows[hi+1:] {
 			shift := len(row.Cells) - len(r.Cells)
-			for j, n := range cols {
+			lo, hasLO := 0, false
+			if shift >= 0 && len(row.Cells) > 0 {
+				lo, hasLO = OrdinalNo(row.Cell(0)) // "Ö1", "ÖÇ 2"
+			}
+			for j := 0; j < len(r.Cells); j++ { // sütun sırasıyla (map sırası rastgele)
+				n, ok := cols[j]
+				if !ok {
+					continue
+				}
 				v := Int(row.Cell(j + shift))
 				if v == nil || *v > 5 {
 					continue
+				}
+				if hasLO {
+					cells = append(cells, MatrixCell{LO: lo, PO: n, Level: *v})
 				}
 				if best[n] == nil || *v > *best[n] {
 					best[n] = v
@@ -426,7 +463,17 @@ func parseWideMatrix(t *Table) ([]OutcomeContribution, bool) {
 		for _, n := range order {
 			out = append(out, OutcomeContribution{No: n, Level: best[n]})
 		}
-		return out, true
+		return out, cells, true
 	}
-	return nil, false
+	return nil, nil, false
+}
+
+func joinNonEmpty(xs []string, sep string) string {
+	var out []string
+	for _, x := range xs {
+		if x = Clean(x); x != "" {
+			out = append(out, x)
+		}
+	}
+	return strings.Join(out, sep)
 }

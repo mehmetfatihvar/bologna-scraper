@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS courses (
     language           TEXT,
     level              TEXT,
     department         TEXT,
-    delivery_mode      TEXT,
+    delivery_mode      TEXT,                     -- Öğrenim Türü: Örgün Öğretim …
+    teaching_mode      TEXT,                     -- Dersin Öğretim Şekli: Yüz Yüze | Uzaktan …
     course_type        TEXT,
     objective          TEXT,
     content            TEXT,
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS courses (
 );
 CREATE INDEX IF NOT EXISTS courses_program_idx ON courses(program_id);
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS lab_hours INT;
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS teaching_mode TEXT;
 CREATE INDEX IF NOT EXISTS courses_code_idx ON courses(code);
 CREATE INDEX IF NOT EXISTS courses_detail_scraped_idx ON courses(detail_scraped_at);
 
@@ -117,8 +119,10 @@ CREATE TABLE IF NOT EXISTS course_weekly_topics (
     week         INT,
     topic        TEXT,
     preparation  TEXT,
+    documents    TEXT,
     PRIMARY KEY (course_id, ordinal)
 );
+ALTER TABLE course_weekly_topics ADD COLUMN IF NOT EXISTS documents TEXT;
 
 CREATE TABLE IF NOT EXISTS course_resources (
     course_id  BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
@@ -155,6 +159,17 @@ CREATE TABLE IF NOT EXISTS course_program_outcomes (
     PRIMARY KEY (course_id, program_outcome_id)
 );
 CREATE INDEX IF NOT EXISTS course_program_outcomes_po_idx ON course_program_outcomes(program_outcome_id);
+
+-- Ayrıntılı matris: dersin hangi öğrenme çıktısı (lo_no → course_learning_outcomes.no) hangi
+-- program çıktısına ne düzeyde katkı veriyor. course_program_outcomes bunun PÇ başına en yükseğidir.
+CREATE TABLE IF NOT EXISTS course_outcome_matrix (
+    course_id           BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    lo_no               INT NOT NULL,
+    program_outcome_id  BIGINT NOT NULL REFERENCES program_outcomes(id) ON DELETE CASCADE,
+    contribution        SMALLINT CHECK (contribution BETWEEN 0 AND 5),
+    PRIMARY KEY (course_id, lo_no, program_outcome_id)
+);
+CREATE INDEX IF NOT EXISTS course_outcome_matrix_po_idx ON course_outcome_matrix(program_outcome_id);
 
 CREATE TABLE IF NOT EXISTS scrape_runs (
     id           BIGSERIAL PRIMARY KEY,
@@ -202,3 +217,13 @@ JOIN programs p ON p.id = pc.program_id
 JOIN courses c  ON c.id = pc.course_id
 LEFT JOIN courses g ON g.id = pc.elective_group_id
 LEFT JOIN units u ON u.id = p.unit_id;
+
+CREATE OR REPLACE VIEW v_course_lo_po_matrix AS
+SELECT c.id AS course_id, c.code, c.name AS course_name,
+       m.lo_no, lo.description AS learning_outcome,
+       po.program_id, po.no AS outcome_no, po.description AS program_outcome,
+       m.contribution
+FROM course_outcome_matrix m
+JOIN courses c           ON c.id = m.course_id
+JOIN program_outcomes po ON po.id = m.program_outcome_id
+LEFT JOIN course_learning_outcomes lo ON lo.course_id = m.course_id AND lo.no = m.lo_no;

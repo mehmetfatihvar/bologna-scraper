@@ -136,6 +136,8 @@ func TestStoreRoundTrip(t *testing.T) {
 		WeeklyTopics:     []parse.WeeklyTopic{{Week: ip(1), Topic: "giriş"}},
 		Assessments:      []parse.Assessment{{Activity: "Vize", Percentage: fp(40)}},
 		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(5)}, {No: 4, Description: "matristen", Level: ip(2)}},
+		OutcomeMatrix:    []parse.MatrixCell{{LO: 1, PO: 1, Level: 5}, {LO: 2, PO: 1, Level: 3}, {LO: 1, PO: 6, Level: 1}},
+		TeachingMode:     "Yüz Yüze",
 	}
 	since := time.Now().Add(-time.Minute)
 	if fresh, _ := st.CourseFresh(ctx, 10, since); fresh {
@@ -152,6 +154,15 @@ func TestStoreRoundTrip(t *testing.T) {
 	}
 	if n := st.count(t, `SELECT count(*) FROM v_course_outcome_matrix WHERE course_id = 10 AND program_id = 1`); n != 2 {
 		t.Fatalf("matris: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_course_lo_po_matrix WHERE course_id = 10 AND program_id = 1`); n != 3 {
+		t.Fatalf("ÖÇ×PÇ matrisi: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_course_lo_po_matrix WHERE course_id = 10 AND lo_no = 1 AND outcome_no = 1 AND learning_outcome = 'a' AND contribution = 5`); n != 1 {
+		t.Fatal("matris ÖÇ açıklamasına bağlanmadı")
+	}
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 10 AND teaching_mode = 'Yüz Yüze'`); n != 1 {
+		t.Fatal("teaching_mode")
 	}
 	if n := st.count(t, `SELECT count(*) FROM program_outcomes WHERE program_id = 1 AND no = 4 AND source = 'course_matrix'`); n != 1 {
 		t.Fatalf("matristen gelen PÇ oluşmadı: %d", n)

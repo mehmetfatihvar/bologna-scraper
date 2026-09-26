@@ -226,3 +226,51 @@ func TestRealOutcomesPage(t *testing.T) {
 		t.Fatalf("got %d: %+v", len(outs), outs)
 	}
 }
+
+func TestRealCourseDetail(t *testing.T) {
+	d, err := ParseCourseDetail(bytes.NewReader(fixture(t, "real/progCourseDetails_1098805.html")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Code != "1551014" || d.Name != "PROGRAMLAMAYA GİRİŞ I" || *d.Semester != 1 || *d.Theory != 3 || *d.Practice != 2 ||
+		*d.Credit != 4 || *d.ECTS != 5 || d.Language != "Türkçe" || d.Type != "Zorunlu" ||
+		d.DeliveryMode != "Örgün Öğretim" || d.TeachingMode != "Yüz Yüze" || d.Instructors != "Dr. Öğretim Üyesi Mehmet ACI" {
+		t.Fatalf("özet/detay: %+v", d)
+	}
+	if d.Details["Son Güncelleme Tarihi"] != "16.06.2026" {
+		t.Fatalf("details: %v", d.Details)
+	}
+	for k := range d.Details {
+		if strings.HasPrefix(k, "tablo") {
+			t.Fatalf("tanınmayan tablo kaldı: %q", k)
+		}
+	}
+	if len(d.LearningOutcomes) != 3 || len(d.WeeklyTopics) != 15 || len(d.Resources) != 1 {
+		t.Fatalf("listeler: ÖÇ=%d hafta=%d kaynak=%d", len(d.LearningOutcomes), len(d.WeeklyTopics), len(d.Resources))
+	}
+	if w := d.WeeklyTopics[0]; w.Preparation != "" || w.Documents != "" || !strings.HasPrefix(w.Topic, "Genel Kavramlar") {
+		t.Fatalf("hafta 1: %+v", w)
+	}
+	if len(d.Assessments) != 2 || *d.Assessments[1].Percentage != 60 {
+		t.Fatalf("değerlendirme: %+v", d.Assessments)
+	}
+	if len(d.Workloads) != 5 || *d.Workloads[0].Count != 14 || *d.Workloads[0].Hours != 3 || *d.Workloads[0].Total != 42 {
+		t.Fatalf("iş yükü: %+v", d.Workloads)
+	}
+	// Matris: 3 ÖÇ × 11 PÇ, P7/P10/P11 boş → 24 hücre; PÇ başına en yüksek düzey.
+	if len(d.OutcomeMatrix) != 24 || d.OutcomeMatrix[0] != (MatrixCell{LO: 1, PO: 1, Level: 2}) {
+		t.Fatalf("matris: %d %+v", len(d.OutcomeMatrix), d.OutcomeMatrix)
+	}
+	want := map[int]int{1: 3, 5: 2, 6: 3, 8: 2}
+	if len(d.ProgramOutcomes) != 11 {
+		t.Fatalf("PÇ: %+v", d.ProgramOutcomes)
+	}
+	for _, oc := range d.ProgramOutcomes {
+		if l, ok := want[oc.No]; ok && (oc.Level == nil || *oc.Level != l) {
+			t.Fatalf("PÇ%d: %+v", oc.No, oc)
+		}
+		if (oc.No == 7 || oc.No == 10 || oc.No == 11) && oc.Level != nil {
+			t.Fatalf("PÇ%d boş olmalı: %+v", oc.No, oc)
+		}
+	}
+}
