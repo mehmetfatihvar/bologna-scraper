@@ -77,8 +77,8 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
 
 - Ders linkleri `href` değil `onclick="prolizOpenCourseDetails(ID)"`; ID `progCourseDetails.aspx?curCourse=ID`'ye gider.
 - Ders planı tek tablodur; "1.Yarıyıl Ders Planı" satırları yarıyılı, `collapse_<grup>` sınıfı havuz üyeliğini belirtir.
-- Keşif sayfasındaki fakülte başlıkları güvenilir okunamıyor; birim adı ders planı başlığından
-  ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") alınır.
+- Keşif sayfasında birim adı `<h5 class="panel-title">` içindedir, ID'si aynı başlıktaki `facAbout.aspx?curUnit=`
+  bilgi ikonundadır. Ders planı başlığı ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") ikinci kaynaktır.
 - Sayfalarda `<meta charset>` yok; sunucu başlığı yoksa geçerli UTF-8 olduğu varsayılır.
 - "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) birçok programda aynıdır; detayları bir kez indirilir.
 
@@ -101,9 +101,9 @@ make lint
 CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
 
 `internal/parse/testdata/real/` gerçek OİBS sayfalarıdır (Bilgisayar Mühendisliği, 1371; ViewState
-kırpıldı). Dört sayfa türünün (program bilgisi, program yeterlilikleri, ders planı, ders detayı)
-parser'ları bunlara karşı test edilir; kök dizindeki diğer fixture'lar sentetik uç durumlardır.
-Keşif sayfası (unitSelection) için henüz gerçek fixture yok.
+kırpıldı). Beş sayfa türünün (program bilgisi, program yeterlilikleri, ders planı, ders detayı
+ve keşif (unitSelection) parser'ları bunlara karşı test edilir; kök dizindeki diğer fixture'lar
+sentetik uç durumlardır.
 Yeni gerçek sayfa eklemek için:
 >
 > ```bash

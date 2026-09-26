@@ -274,3 +274,36 @@ func TestRealCourseDetail(t *testing.T) {
 		}
 	}
 }
+
+func TestRealUnitSelection(t *testing.T) {
+	ps, us, err := ParseUnitSelection(bytes.NewReader(fixture(t, "real/unitSelection_lis.html")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ps) != 153 {
+		t.Fatalf("153 program beklendi, %d", len(ps))
+	}
+	byID := map[int64]ProgramRef{}
+	for _, p := range ps {
+		byID[p.ID] = p
+		if p.UnitID == 0 || p.UnitName == "" {
+			t.Fatalf("birimi eksik program: %+v", p)
+		}
+	}
+	if p := byID[1371]; p.Name != "BİLGİSAYAR MÜHENDİSLİĞİ" || p.UnitID != 22 || p.UnitName != "MÜHENDİSLİK FAKÜLTESİ" {
+		t.Fatalf("1371: %+v", p)
+	}
+	if p := byID[2297]; p.UnitID != 20 || p.UnitName != "İSLAMİ İLİMLER FAKÜLTESİ" {
+		t.Fatalf("2297: %+v", p)
+	}
+	names := map[int64]string{}
+	for _, u := range us {
+		names[u.ID] = u.Name
+		if u.URL != "" {
+			t.Fatalf("birim linki takip edilmemeli: %+v", u)
+		}
+	}
+	if names[22] != "MÜHENDİSLİK FAKÜLTESİ" || len(us) < 20 {
+		t.Fatalf("birimler (%d): %v", len(us), names)
+	}
+}

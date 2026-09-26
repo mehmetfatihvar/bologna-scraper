@@ -71,6 +71,20 @@ func ParseUnitSelection(r io.Reader) ([]ProgramRef, []UnitLink, error) {
 			if n.DataAtom == atom.Optgroup {
 				heading, headingUnit = Clean(attr(n, "label")), 0
 			}
+			// Gerçek sayfa: <h5 class="panel-title"><a href="#x22">MÜHENDİSLİK FAKÜLTESİ</a>
+			// <a href="facAbout.aspx?curUnit=22"><ikon/></a></h5> — ad ve ID aynı başlıkta, ayrı linklerde.
+			if isHeadingNode(n) && n.DataAtom != atom.Th {
+				text := Clean(textOf(n))
+				if unit := firstID(reUnit, strings.Join(refsOf(n, true), " ")); unit != 0 && looksLikeUnitName(text) &&
+					firstID(reSunit, strings.Join(refsOf(n, true), " ")) == 0 {
+					if !seenUnit[unit] {
+						seenUnit[unit] = true
+						units = append(units, UnitLink{ID: unit, Name: text}) // facAbout bilgi sayfası; program listesi değil
+					}
+					heading, headingUnit = text, unit
+					return
+				}
+			}
 			refs := strings.Join(refsOf(n, false), " ")
 			sunit, unit := firstID(reSunit, refs), firstID(reUnit, refs)
 			text := Clean(textOf(n))

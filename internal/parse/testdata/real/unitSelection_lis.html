@@ -1,0 +1,1017 @@
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="tr" xml:lang="tr">
+<head><title>
+
+</title><meta http-equiv="x-ua-compatible" content="ie=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="robots" content="noindex,nofollow" /><meta name="googlebot" content="noindex" /><link href="../proliz_boots4/bootstrap/css/bootstrap.min.css" rel="stylesheet" /><link href="../proliz_boots4/fontawesome/css/all.min.css" rel="stylesheet" /><link href="prolizcss/prolizbologna_v2.css" rel="stylesheet" />
+<style>
+    :root { --primary-color: #1E2A38; --secondary-color: #C9A86A; --third-color: #F4F7FB; --gold-light: #D4A017; --surface: #FFFFFF; --surface-alt: var(--third-color); --text-primary: #0D1B2A; --text-muted: #5C6F82; --border-subtle: rgba(184,134,11,.18); --radius-card: 14px; --shadow-card: 0 4px 24px rgba(13,27,42,.09); --transition: .22s cubic-bezier(.4,0,.2,1); }
+    body.bologna-unit-selection-page { font-family: "Open Sans", Tahoma, sans-serif; background: var(--surface-alt); color: var(--text-primary); padding: 5px; }
+    .unit-page-wrap { margin: 0 auto; }
+    .unit-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
+    .unit-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .65rem; padding: .75rem .9rem; background: linear-gradient(180deg, rgba(30,42,56,.04) 0%, rgba(30,42,56,.01) 100%); border-bottom: 1px solid var(--border-subtle); }
+    .unit-toolbar-text { flex: 1 1 260px; font-size: 9pt; line-height: 1.45; color: var(--text-primary); }
+    .unit-toolbar-text span, .unit-toolbar-text font { font-size: 9pt !important; color: var(--text-primary) !important; }
+    .unit-toolbar-actions { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .unit-search-input { width: min(240px, 42vw); background: #fff; border: 1px solid rgba(13,27,42,.14); color: var(--text-primary); border-radius: 10px; font-size: 9pt; padding: .4rem .55rem; outline: none; transition: border-color var(--transition), box-shadow var(--transition); }
+    .unit-search-input::placeholder { color: rgba(13,27,42,.45); }
+    .unit-search-input:focus { border-color: rgba(201,168,106,.75); box-shadow: 0 0 0 .2rem rgba(201,168,106,.14); }
+    .unit-tree-wrap { padding: .55rem .65rem .85rem; }
+    .unit-tree-wrap .panel { margin-bottom: .55rem !important; background: #fff; border: 1px solid rgba(13,27,42,.08) !important; border-radius: 12px !important; box-shadow: 0 2px 10px rgba(13,27,42,.04); overflow: hidden; }
+    .unit-tree-wrap .panel-default { border-color: rgba(13,27,42,.08) !important; }
+    .unit-tree-wrap .panel-heading { background: rgba(30,42,56,.03) !important; border-bottom: 1px solid rgba(13,27,42,.07) !important; padding: .5rem .65rem !important; color: var(--primary-color) !important; }
+    .unit-tree-wrap .panel-title { height: auto !important; margin: 0 !important; font-size: .9rem !important; line-height: 1.35; }
+    .unit-tree-wrap .panel-title > a, .unit-tree-wrap .panel-title > small, .unit-tree-wrap .panel-title > .small, .unit-tree-wrap .panel-title > small > a, .unit-tree-wrap .panel-title > .small > a { font-size: 9pt !important; color: var(--primary-color) !important; text-decoration: none !important; }
+    .unit-tree-wrap .panel-title a:hover { color: var(--gold-light) !important; }
+    .unit-tree-wrap .list-group { border-radius: 0; margin-bottom: 0; }
+    .unit-tree-wrap .list-group-item { font-size: 9pt !important; border-color: rgba(13,27,42,.07) !important; padding: .48rem .7rem; color: var(--text-primary); background: #fff; transition: background var(--transition), color var(--transition); }
+    .unit-tree-wrap a.list-group-item, .unit-tree-wrap .list-group-item a { color: var(--text-primary) !important; text-decoration: none !important; }
+    .unit-tree-wrap a.list-group-item:hover, .unit-tree-wrap .list-group-item a:hover { background: rgba(201,168,106,.11) !important; color: var(--primary-color) !important; }
+    .unit-tree-wrap .panel-collapse > .list-group .list-group-item:first-child { border-top-right-radius: 0; border-top-left-radius: 0; }
+    .unit-tree-wrap .panel-collapse > .list-group .list-group-item { border-width: 1px 0; }
+    .unit-tree-wrap .panel-collapse > .list-group { margin-bottom: 0; }
+    .unit-tree-wrap .panel-collapse .list-group-item { border-radius: 0; }
+    .unit-tree-wrap .panel-collapse .list-group .list-group { margin: 0; margin-top: .35rem; }
+    .unit-tree-wrap .panel-collapse .list-group-item li.list-group-item { margin: 0 -15px; border-top: 1px solid rgba(13,27,42,.07) !important; border-bottom: 0; padding-left: 1.4rem; }
+    .unit-tree-wrap .panel-collapse .list-group-item li.list-group-item:last-child { padding-bottom: 0; }
+    .unit-tree-wrap .panel-collapse div.list-group div.list-group { margin: 0; }
+    .unit-tree-wrap .panel-collapse div.list-group .list-group a.list-group-item { border-top: 1px solid rgba(13,27,42,.07) !important; border-bottom: 0; padding-left: 1.4rem; }
+    .unit-tree-wrap .accordion-btn, .unit-tree-wrap .btn.btn-xs, .unit-tree-wrap a.btn { border-radius: 8px; transition: background var(--transition), transform var(--transition); }
+    .unit-tree-wrap .text-success { color: #2e9f6b !important; }
+    .unit-tree-wrap .text-info { color: #3b82c4 !important; }
+    .unit-tree-wrap .text-primary { color: var(--primary-color) !important; }
+    .unit-tree-wrap .unit-match-hidden { display: none !important; }
+    @media (max-width: 767.98px) {
+        body.bologna-unit-selection-page { padding: .45rem .45rem 1rem; }
+        .unit-toolbar { padding: .65rem .7rem; }
+        .unit-search-input { width: 100%; }
+        .unit-toolbar-actions { width: 100%; justify-content: flex-end; }
+    }
+</style>
+<script type="text/javascript">
+function expand_all() { $('.collapse').each(function () { $(this).addClass('show'); }); $('.accordion-btn').each(function () { $(this).attr('aria-expanded', 'true'); }); }
+function collapse_all() { $('.collapse').each(function () { $(this).removeClass('show'); }); $('.accordion-btn').each(function () { $(this).attr('aria-expanded', 'false'); }); }
+function normUnitTxt(s) {
+    s = (s || '').toString().toLowerCase().trim();
+    return s.replace(/\u011f/g, 'g').replace(/\u00fc/g, 'u').replace(/\u015f/g, 's').replace(/\u0131/g, 'i').replace(/\u00f6/g, 'o').replace(/\u00e7/g, 'c');
+}
+function initUnitSearch() {
+    var input = document.getElementById('unitSearchInput');
+    var wrap = document.querySelector('.unit-tree-wrap');
+    if (!input || !wrap) return;
+    input.addEventListener('input', function () {
+        var term = normUnitTxt(input.value || '');
+        var panels = wrap.querySelectorAll('.panel');
+        if (!term) {
+            wrap.querySelectorAll('.unit-match-hidden').forEach(function (el) { el.classList.remove('unit-match-hidden'); });
+            return;
+        }
+        panels.forEach(function (panel) {
+            var items = panel.querySelectorAll('.list-group-item');
+            var panelTitle = panel.querySelector('.panel-title');
+            var titleTxt = panelTitle ? normUnitTxt(panelTitle.textContent) : '';
+            var panelMatch = titleTxt.indexOf(term) !== -1;
+            var anyItem = false;
+            items.forEach(function (item) {
+                var txt = normUnitTxt(item.textContent);
+                var match = panelMatch || txt.indexOf(term) !== -1;
+                item.classList.toggle('unit-match-hidden', !match);
+                if (match) anyItem = true;
+            });
+            panel.classList.toggle('unit-match-hidden', !panelMatch && !anyItem);
+            if (anyItem || panelMatch) {
+                var collapse = panel.querySelector('.collapse');
+                if (collapse) collapse.classList.add('show');
+            }
+        });
+    });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            input.value = '';
+            input.dispatchEvent(new Event('input'));
+        }
+    });
+}
+document.addEventListener('DOMContentLoaded', initUnitSearch);
+</script>
+<script type="text/javascript">var gClickedItem; function myOnFrameClick(itemLink) {var ul = document.getElementById('proMenu');document.getElementById('lblMenuBuf').style.visibility = 'hidden'; document.getElementById('IFRAME1').src = itemLink; if (isMobile()) { $('[data-bs-toggle="push-menu"]').pushMenu('toggle'); } window.top.Swal.fire({allowEscapeKey: false,allowOutsideClick: false,didOpen: () => {window.top.swal.showLoading();}});}</script>
+<link href="../App_Themes/oibs21/oibs21.css" type="text/css" rel="stylesheet" /><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/jquery-ui/jquery-ui.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/fontawesome/css/all.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/select2/css/select2.min.css"></link><link rel="stylesheet" type="text/css" href="/oibs/proliz_boots4/sweetalert2/sweetalert2.min.css"></link></head>
+<body class="bologna-unit-selection-page">
+<form method="post" action="./unitSelection.aspx?lang=tr&amp;type=lis" id="form1">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="" />
+
+
+<script src="/oibs/proliz_boots4/jquery/jquery-3.7.1.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/jquery-ui/jquery-ui.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/sweetalert2/sweetalert2.min.js" type="text/javascript"></script>
+<script src="/oibs/proliz_boots4/select2/js/select2.min.js" type="text/javascript"></script>
+<script src="/oibs/utils/ModalPopupWindow_v25_min.js" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+
+        (function () {
+            // 1) Anahtari hemen sil ki refresh() bos stack gorsun (flash olmasin).
+            try { sessionStorage.removeItem("BootsModalV2::" + (location.pathname || "") + "::stack"); } catch (e) {}
+            // 2) Kutuphane hazirsa da kapatma cagrisi yap (refresh zaten actiysa kapatir).
+            function doReset() {
+                if (window.BootsModalV2 && window.BootsModalV2.reset) {
+                    window.BootsModalV2.reset();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', doReset);
+            } else {
+                doReset();
+            }
+        })();
+        (function () {
+            // 1) Anahtari hemen sil ki refresh() bos liste gorsun (flash olmasin).
+            try { sessionStorage.removeItem("BootsOffCanvas::" + (location.pathname || "") + "::open"); } catch (e) {}
+            // 2) Kutuphane hazirsa kapatma cagrisi da yap (refresh zaten actiysa kapatir).
+            function doReset() {
+                if (window.BootsOffCanvas && window.BootsOffCanvas.reset) {
+                    window.BootsOffCanvas.reset();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', doReset);
+            } else {
+                doReset();
+            }
+        })();//]]>
+</script>
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="84BD8371" />
+<div class="unit-page-wrap">
+    <div class="unit-card">
+        <div class="unit-toolbar">
+            <div class="unit-toolbar-text">
+                <span id="lblFakulteAciklama"><font face="Open Sans" color="#3A3A3A" size="1">Fakültelere bağlı programları listelemek için fakültelerin sol tarafında yer alan artı(+) butonuna basınız</font></span>
+            </div>
+            <div class="unit-toolbar-actions">
+                <input id="unitSearchInput" class="unit-search-input" type="text" autocomplete="off" placeholder="Birim veya program ara..." />
+                <a onclick="expand_all();" id="btnExpAll" title="Tümünü Genişlet" class="btn btn-default btn-xs" href="javascript:__doPostBack(&#39;btnExpAll&#39;,&#39;&#39;)" style="display:inline-block;"><font face="Open Sans" color="#5B636A" size="2"><i style="padding-left:3px;font-size:9pt" class="fal fa-expand-arrows-alt text-success"></i></font></a>
+                <a onclick="collapse_all();" id="btnColAll" title="Tümünü Daralt" class="btn btn-default btn-xs" href="javascript:__doPostBack(&#39;btnColAll&#39;,&#39;&#39;)" style="display:inline-block;"><font face="Open Sans" color="#5B636A" size="2"><i style="padding-left:3px;font-size:9pt" class="fal fa-compress-arrows-alt text-danger"></i></font></a>
+            </div>
+        </div>
+        <div class="unit-tree-wrap">
+            <span id="lblMenuBuf" style="display:inline-block;"><font face="Open Sans" color="#3A3A3A" size="1">
+
+               <style>
+                      .menu-search-input {
+                          width: 100%;
+                          padding: 6px 8px;
+                          font-size: 9pt;
+                          border: 1px solid #ccc;
+                          border-radius: 4px;
+                          outline: none;
+                          box-shadow: none;
+                      }
+                      .menu-search-input:focus {
+                          border-color: #5bc0de;          /* Bootstrap info rengi */
+                          box-shadow: 0 0 4px rgba(91,192,222,.5);
+                      }
+                </style>
+               <div style="margin-bottom:8px;">
+                  <input type="text" id="menuSearch" class="menu-search-input"
+                      placeholder="Fakülte / Bölüm ara..." >
+               </div>
+                
+
+
+<div class="panel-group" id="accordion">
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x40"><span class="far fa-plus-square text-info">
+
+                     </span>ANAMUR UYGULAMALI TEKNOLOJİ VE İŞLETMECİLİK YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=40"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x40" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=40&curSunit=2548">TURİZM İŞLETMECİLİĞİ </a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x10"><span class="far fa-plus-square text-info">
+
+                     </span>DENİZCİLİK FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=10"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x10" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=10&curSunit=2530">DENİZ ULAŞTIRMA İŞLETME MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=10&curSunit=1615">DENİZCİLİK İŞLETMELERİ YÖNETİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=10&curSunit=2524">DENİZCİLİK İŞLETMELERİ YÖNETİMİ (%30 İNGİLİZCE)</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x42"><span class="far fa-plus-square text-info">
+
+                     </span>DEVLET KONSERVATUVARI</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=42"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x42" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=2215">BESTECİLİK VE ORKESTRA ŞEFLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1403">KOMPOZİSYON VE ORKESTRA ŞEFLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1119">KOMPOZİSYON VE ORKESTRA ŞEFLİĞİ ( DÖNEMLİK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1404">KOMPOZİSYON VE ORKESTRA ŞEFLİĞİ - TEORİ ( 2015 )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=880">KOMPOZİSYON VE ORKESTRA ŞEFLİĞİ ( YILLIK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=881">NEFESLİ ÇALGILAR VE VURMA ÇALGILAR ( YILLIK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1405">NEFESLİ ÇALGILAR VE VURMA ÇALGILAR ( 2015 )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1406">PİYANO - ARP ( 2015 )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1407">PİYANO - GİTAR ( 2015 )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1408">PİYANO - PİYANO ( 2015 )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=890">PİYANO ( YILLIK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=60">ŞAN</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1123">ŞAN ( DÖNEMLİK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=2216">ÜFLEMELİ VE VURMALI ÇALGILAR</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=891">YAYLI ÇALGILAR ( YILLIK )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=42&curSunit=1409">YAYLI ÇALGILAR ( 2015 )</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x11"><span class="far fa-plus-square text-info">
+
+                     </span>DİŞ HEKİMLİĞİ FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=11"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x11" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=11&curSunit=1759">DİŞ HEKİMLİĞİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x12"><span class="far fa-plus-square text-info">
+
+                     </span>ECZACILIK FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=12"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x12" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=12&curSunit=62">ECZACILIK</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x13"><span class="far fa-plus-square text-info">
+
+                     </span>EĞİTİM FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=13"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x13" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=92">FEN BİLGİSİ ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=94">İLKÖĞRETİM MATEMATİK ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=118">İNGİLİZCE ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=2517">İNGİLİZCE ÖĞRETMENLİĞİ (İNGİLİZCE)</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=96">OKUL ÖNCESİ ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=2498">ÖZEL EĞİTİM ÖĞRETMENLİĞİ </a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=86">REHBERLİK VE PSİKOLOJİK DANIŞMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=99">SINIF ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=2244">SOSYAL BİLGİLER ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=2549">Trafik Öğretmenliği</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=13&curSunit=114">TÜRKÇE ÖĞRETMENLİĞİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x43"><span class="far fa-plus-square text-info">
+
+                     </span>ERDEMLİ UYGULAMALI TEKNOLOJİ VE İŞLETMECİLİK YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=43"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x43" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=43&curSunit=2208">BİLİŞİM SİSTEMLERİ VE TEKNOLOJİLERİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=43&curSunit=2207">YÖNETİM BİLİŞİM SİSTEMLERİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x14"><span class="far fa-plus-square text-info">
+
+                     </span>FEN - EDEBİYAT FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=14"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x14" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=153">ALMANCA MÜTERCİM - TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=2209">ALMANCA MÜTERCİM VE TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=143">ARKEOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=149">BİYOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=2031">BİYOTEKNOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=159">FELSEFE</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=160">FELSEFE ( 2. ÖĞRETİM ) ( ESKİ )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=163">FİZİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=156">FRANSIZCA MÜTERCİM - TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=2211">FRANSIZCA MÜTERCİM VE TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=2212">FRANSIZCA MÜTERCİM VE TERCÜMANLIK ( KKTC UYRUKLU )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=1967">İNGİLİZ DİL BİLİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=168">İNGİLİZ DİL BİLİMİ ( İNGİLİZCE )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=173">KİMYA</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=176">MATEMATİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=179">PSİKOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=1366">SANAT TARİHİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=1373">SOSYOLOJİ ( KKTC )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=185">TARİH</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=585">TARİH ( 2. ÖĞRETİM )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=14&curSunit=188">TÜRK DİLİ VE EDEBİYATI</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x30"><span class="far fa-plus-square text-info">
+
+                     </span>FEN FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=30"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x30" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2302">BİYOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2303">BİYOTEKNOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2304">FİZİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2305">KİMYA</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2546">KİMYA (KKTC UYRUKLU)</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=30&curSunit=2306">MATEMATİK</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x15"><span class="far fa-plus-square text-info">
+
+                     </span>GÜZEL SANATLAR FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=15"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x15" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=210">GRAFİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=2218">GRAFİK SANATLAR</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=2547">GRAFİK SANATLAR (KKTC UYRUKLU)</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=213">HEYKEL</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=220">RESİM</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=231">SERAMİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=236">TEKSTİL</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=15&curSunit=2219">TEKSTİL VE MODA TASARIMI</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x17"><span class="far fa-plus-square text-info">
+
+                     </span>HEMŞİRELİK FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=17"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x17" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=17&curSunit=1881">HEMŞİRELİK</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x44"><span class="far fa-plus-square text-info">
+
+                     </span>İÇEL SAĞLIK YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=44"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x44" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_blank" href=".">EBELİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=44&curSunit=359">HEMŞİRELİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=44&curSunit=1468">SAĞLIK KURUMLARI İŞLETMECİLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=44&curSunit=1320">SAĞLIK YÖNETİMİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x18"><span class="far fa-plus-square text-info">
+
+                     </span>İKTİSADİ VE İDARİ BİLİMLER FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=18"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x18" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=586">ÇALIŞMA EKONOMİSİ VE ENDÜSTRİ İLİŞKİLERİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=1614">ÇALIŞMA EKONOMİSİ VE ENDÜSTRİ İLİŞKİLERİ ( 2 ÖĞRETİM )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=243">İKTİSAT</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=587">İKTİSAT ( 2. ÖĞRETİM )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=246">İŞLETME</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=249">KAMU YÖNETİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=252">MALİYE</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=1362">MALİYE ( KKTC UYRUKLU )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=1368">ULUSLARARASI İLİŞKİLER</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=18&curSunit=2182">ULUSLARARASI İLİŞKİLER ( %30 İNGİLİZCE )</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x31"><span class="far fa-plus-square text-info">
+
+                     </span>İLAHİYAT FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=31"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x31" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=31&curSunit=2495">İLAHİYAT</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=31&curSunit=2496">İLAHİYAT  (M.T.O.K.)</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x19"><span class="far fa-plus-square text-info">
+
+                     </span>İLETİŞİM FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=19"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x19" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=19&curSunit=259">GAZETECİLİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=19&curSunit=262">RADYO, TELEVİZYON VE SİNEMA</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x29"><span class="far fa-plus-square text-info">
+
+                     </span>İNSAN VE TOPLUM BİLİMLERİ FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=29"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x29" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2309">ALMANCA MÜTERCİM VE TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2307">ARKEOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2308">FELSEFE</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2310">FRANSIZCA MÜTERCİM VE TERCÜMANLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2311">FRANSIZCA MÜTERCİM VE TERCÜMANLIK ( KKTC UYRUKLU )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2318">İNGİLİZ DİL BİLİMİ ( İNGİLİZCE )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2501">İNGİLİZ DİLBİLİMİ ( İNGİLİZCE )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2312">PSİKOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2313">SANAT TARİHİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2314">SOSYOLOJİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2315">SOSYOLOJİ (KKTC UYRUKLU)</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2316">TARİH</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=29&curSunit=2317">TÜRK DİLİ VE EDEBİYATI</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x20"><span class="far fa-plus-square text-info">
+
+                     </span>İSLAMİ İLİMLER FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=20"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x20" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=20&curSunit=2297">İSLAMİ İLİMLER</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=20&curSunit=2299">İSLAMİ İLİMLER (M.T.O.K.)</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x21"><span class="far fa-plus-square text-info">
+
+                     </span>MİMARLIK FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=21"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x21" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=21&curSunit=283">MİMARLIK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=21&curSunit=918">ŞEHİR VE BÖLGE PLANLAMA ( İNGİLİZCE )</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x22"><span class="far fa-plus-square text-info">
+
+                     </span>MÜHENDİSLİK FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=22"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x22" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1371">BİLGİSAYAR MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=306">ÇEVRE MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=309">ELEKTRİK - ELEKTRONİK MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1357">ELEKTRİK - ELEKTRONİK MÜHENDİSLİĞİ ( T. Ö. M. T )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=312">GIDA MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=2082">HARİTA MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1164">İNŞAAT MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1827">İNŞAAT MÜHENDİSLİĞİ ( T. Ö. M. T )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=317">JEOLOJİ MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=320">KİMYA MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=323">MAKİNE MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1358">MAKİNE MÜHENDİSLİĞİ ( T. Ö. M. T )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1351">METALURJİ VE MALZEME MÜHENDİSLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=22&curSunit=1828">METALURJİ VE MALZEME MÜHENDİSLİĞİ ( T. Ö. M. T )</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x33"><span class="far fa-plus-square text-info">
+
+                     </span>MÜZİK VE SAHNE SANATLARI FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=33"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x33" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2512"> ŞAN</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2508">BESTECİLİK VE ORKESTRA ŞEFLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2509">PİYANO</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2513">ŞAN (KKTC UYRUKLU)</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2511">ÜFLEMELİ VE VURMALI ÇALGILAR</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=33&curSunit=2510">YAYLI ÇALGILAR</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x34"><span class="far fa-plus-square text-info">
+
+                     </span>ORTAK SEÇMELİ DERSLER KOORDİNATÖRLÜĞÜ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=34"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x34" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=34&curSunit=2540">MÜFREDAT DIŞI ORTAK SEÇMELİ DERSLER</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=34&curSunit=2541">ORTAK SEÇMELİ DERSLER</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x23"><span class="far fa-plus-square text-info">
+
+                     </span>REKTÖRLÜK</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=23"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x23" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_blank" href="deneme">OTOMASYON VE RAPORLAMA ŞUBE MÜDÜRLÜĞÜ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x32"><span class="far fa-plus-square text-info">
+
+                     </span>SAĞLIK BİLİMLERİ FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=32"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x32" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=32&curSunit=2504">EBELİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=32&curSunit=2507">SAĞLIK YÖNETİMİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x45"><span class="far fa-plus-square text-info">
+
+                     </span>SİLİFKE UYGULAMALI TEKNOLOJİ VE İŞLETMECİLİK YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=45"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x45" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=45&curSunit=374">İŞLETME BİLGİ YÖNETİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=45&curSunit=2213">YÖNETİM BİLİŞİM SİSTEMLERİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x24"><span class="far fa-plus-square text-info">
+
+                     </span>SPOR BİLİMLERİ FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=24"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x24" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=24&curSunit=2114">ANTRENÖRLÜK EĞİTİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=24&curSunit=2107">BEDEN EĞİTİMİ VE SPOR ÖĞRETMENLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=24&curSunit=2115">REKREASYON</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=24&curSunit=2110">REKREASYON ( 2. ÖĞRETİM )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=24&curSunit=2113">SPOR YÖNETİCİLİĞİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x25"><span class="far fa-plus-square text-info">
+
+                     </span>SU ÜRÜNLERİ FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=25"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x25" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=25&curSunit=406">SU ÜRÜNLERİ MÜHENDİSLİĞİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x46"><span class="far fa-plus-square text-info">
+
+                     </span>TAKI TEKNOLOJİSİ VE TASARIMI YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=46"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x46" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=46&curSunit=417">KUYUMCULUK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=46&curSunit=420">TAKI TASARIMI</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=46&curSunit=2220">TAKI TASARIMI </a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=46&curSunit=423">TAKI TEKNOLOJİSİ VE TASARIMI</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=46&curSunit=2514">TAKI TEKNOLOJİSİ VE TASARIMI  (KKTC UYRUKLU) </a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x26"><span class="far fa-plus-square text-info">
+
+                     </span>TIP FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=26"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x26" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=26&curSunit=508">TIP</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x27"><span class="far fa-plus-square text-info">
+
+                     </span>TURİZM FAKÜLTESİ</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=27"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x27" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=1317">GASTRONOMİ VE MUTFAK SANATLARI</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=1374">GASTRONOMİ VE MUTFAK SANATLARI ( KKTC )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=2243">REKREASYON YÖNETİMİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=1143">TURİZM İŞLETMECİLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=1144">TURİZM İŞLETMECİLİĞİ ( 2. ÖĞRETİM )</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=27&curSunit=1367">TURİZM REHBERLİĞİ</a></li>
+
+</ul></div></div>
+
+               <div class="panel panel-default">
+
+                  <div class="panel-heading">
+
+                     <h5 class="panel-title">
+
+                     <a data-bs-toggle="collapse" data-bs-parent="#accordion" href="#x48"><span class="far fa-plus-square text-info">
+
+                     </span>TURİZM İŞLETMECİLİĞİ VE OTELCİLİK YÜKSEKOKULU</a> <a href="facAbout.aspx?lang=tr&curOp=facAbout&curUnit=48"><span style="font-size:14px" class="fal fa-info-circle text-info"></span></a>
+
+                     </h5></div>
+
+                     <div id="x48" class="panel-collapse collapse in"><ul class="list-group">
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=48&curSunit=559">KONAKLAMA İŞLETMECİLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=48&curSunit=562">SEYAHAT İŞLETMECİLİĞİ</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=48&curSunit=565">TURİZM İŞLETMECİLİĞİ VE OTELCİLİK</a></li>
+
+<li class="list-group-item"><span class="fal fa-archive text-success"></span><a target="_parent" href="index.aspx?lang=tr&curOp=showPac&curUnit=48&curSunit=567">TURİZM İŞLETMECİLİĞİ VE OTELCİLİK ( 2. ÖĞRETİM )</a></li>
+
+</ul></div></div>
+
+</div>
+
+              <script>
+                  document.getElementById("menuSearch").addEventListener("keyup", function () {
+                      var filter = this.value.toLowerCase();
+                      var panels = document.querySelectorAll("#accordion .panel");
+                      panels.forEach(function (panel) {
+                          var collapse = panel.querySelector(".panel-collapse");
+                          var items = panel.querySelectorAll(".list-group-item");
+                          var panelHasVisibleItem = false;
+                          items.forEach(function (item) {
+                              var text = item.innerText.toLowerCase();
+                              if (text.indexOf(filter) > -1) {
+                                  item.style.display = "";
+                                  panelHasVisibleItem = true;
+                              } else {
+                                  item.style.display = "none";
+                              }
+                          });
+                          panel.style.display = panelHasVisibleItem ? "" : "none";
+                          if (filter.length > 0 && panelHasVisibleItem) {
+                              collapse.classList.add("in");        // Bootstrap 3
+                              collapse.classList.add("show");      // Bootstrap 4/5
+                          }
+                      });
+                  });
+             </script>
+           </font></span>
+        </div>
+    </div>
+    <span id="lblUrl" class="text-muted" style="display:none;"><i><font face="Open Sans" color="#3A3A3A" size="1"></font></i></span>
+</div>
+<script src="../proliz_boots4/jquery/jquery-3.7.1.min.js"></script>
+<script src="../proliz_boots4/jquery-ui/jquery-ui.min.js"></script>
+<script src="../proliz_boots4/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+var baseUrl = '/oibs/';var modalWin = new CreateModalPopUpObject();//]]>
+</script>
+</form>
+</body>
+</html>
