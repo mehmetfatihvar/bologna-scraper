@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -40,6 +41,7 @@ type Sink interface {
 	Program(ctx context.Context, ref parse.ProgramRef, p *parse.Program, url string) error
 	ProgramOutcomes(ctx context.Context, programID int64, outs []parse.Outcome, source string) error
 	Curriculum(ctx context.Context, programID int64, cur *parse.Curriculum) error
+	// Course: programID dersin sahibi olan program; 0 ise sahip bilinmiyor.
 	Course(ctx context.Context, programID, courseID int64, d *parse.CourseDetail, url string) error
 }
 
@@ -62,6 +64,7 @@ type Scraper struct {
 	programs, courses, skipped, errors atomic.Int64
 	done                               atomic.Int64 // biten program (başarılı/başarısız)
 	courseSeen                         sync.Map     // curCourse -> struct{}: aynı çalışmada bir kez indir
+	deferred                           sync.Map     // curCourse -> struct{}: sahibi belirsiz havuz dersleri
 }
 
 type Stats struct {
@@ -182,6 +185,9 @@ loop:
 	}
 	close(jobs)
 	wg.Wait()
+	if ctx.Err() == nil && !s.SkipDetails {
+		s.runDeferred(ctx)
+	}
 	return s.Stats()
 }
 
@@ -293,43 +299,87 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		return
 	}
 
-	// 5) Ders detayları. Birden çok programın planındaki ortak dersler bir kez indirilir;
-	// katkı matrisi dersin sahibi olan programa bağlanır (bkz. store.Course).
-	fc, _ := s.Sink.(FreshChecker)
+	// 5) Ders detayları. Seçmeli havuz dersleri (GroupID != 0) çoğunlukla başka bir programa aittir
+	// (ör. "ORTAK SEÇMELİ DERSLER"): sayfalarındaki PÇ katkıları o programın çıktılarıdır. Bu yüzden
+	// burada indirilmez; sahibi aynı çalışmadaysa onunla, değilse Run sonunda sahipsiz indirilir.
 	for _, e := range entries {
 		if ctx.Err() != nil {
 			return
 		}
-		if e.IsGroup { // seçmeli grup satırının detay sayfası yok
-			continue
+		switch {
+		case e.IsGroup: // seçmeli grup satırının detay sayfası yok
+		case e.GroupID != 0:
+			s.deferred.Store(e.CourseID, struct{}{})
+		default:
+			s.course(ctx, ref.ID, e.CourseID)
 		}
-		if _, dup := s.courseSeen.LoadOrStore(e.CourseID, struct{}{}); dup {
-			continue
-		}
-		if s.FreshWithin > 0 && fc != nil {
-			if fresh, err := fc.CourseFresh(ctx, e.CourseID, time.Now().Add(-s.FreshWithin)); err == nil && fresh {
-				s.skipped.Add(1)
-				continue
-			}
-		}
-		du := s.Client.URL(PageCourseDetail, url.Values{"curCourse": {id(e.CourseID)}})
-		b, err := s.Client.Get(ctx, du)
-		if err != nil {
-			s.fail(du, err)
-			continue
-		}
-		d, err := parse.ParseCourseDetail(bytes.NewReader(b))
-		if err != nil {
-			s.fail(du, err)
-			continue
-		}
-		if err := s.Sink.Course(ctx, ref.ID, e.CourseID, d, du); err != nil {
-			s.fail(du, err)
-			continue
-		}
-		s.courses.Add(1)
-		log.Debug("ders", "id", e.CourseID, "kod", d.Code, "ad", d.Name)
 	}
+}
+
+// course, ders detayını bir çalışmada en fazla bir kez indirip yazar. ownerID 0 ise ders hiçbir
+// programa sahiplenilmez (katkı matrisi, sahibi bilinmeden yanlış programa bağlanmasın diye yazılmaz).
+func (s *Scraper) course(ctx context.Context, ownerID, courseID int64) {
+	if _, dup := s.courseSeen.LoadOrStore(courseID, struct{}{}); dup {
+		return
+	}
+	if fc, ok := s.Sink.(FreshChecker); ok && s.FreshWithin > 0 {
+		if fresh, err := fc.CourseFresh(ctx, courseID, time.Now().Add(-s.FreshWithin)); err == nil && fresh {
+			s.skipped.Add(1)
+			return
+		}
+	}
+	du := s.Client.URL(PageCourseDetail, url.Values{"curCourse": {id(courseID)}})
+	b, err := s.Client.Get(ctx, du)
+	if err != nil {
+		s.fail(du, err)
+		return
+	}
+	d, err := parse.ParseCourseDetail(bytes.NewReader(b))
+	if err != nil {
+		s.fail(du, err)
+		return
+	}
+	if err := s.Sink.Course(ctx, ownerID, courseID, d, du); err != nil {
+		s.fail(du, err)
+		return
+	}
+	s.courses.Add(1)
+	s.Log.Debug("ders", "id", courseID, "sahip", ownerID, "kod", d.Code, "ad", d.Name)
+}
+
+// runDeferred, sahibi bu çalışmada taranmamış havuz derslerinin detayını indirir.
+func (s *Scraper) runDeferred(ctx context.Context) {
+	var ids []int64
+	s.deferred.Range(func(k, _ any) bool {
+		if _, done := s.courseSeen.Load(k); !done {
+			ids = append(ids, k.(int64))
+		}
+		return true
+	})
+	if len(ids) == 0 {
+		return
+	}
+	slices.Sort(ids)
+	s.Log.Info("sahibi taranmayan seçmeli havuz dersleri", "ders", len(ids))
+	jobs := make(chan int64)
+	var wg sync.WaitGroup
+	for i := 0; i < max(s.Workers, 1); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for cid := range jobs {
+				s.course(ctx, 0, cid)
+			}
+		}()
+	}
+	for _, cid := range ids {
+		if ctx.Err() != nil {
+			break
+		}
+		jobs <- cid
+	}
+	close(jobs)
+	wg.Wait()
 }
 
 // JSONSink, veritabanı olmadan (--dry-run) sonuçları JSON satırları olarak yazar.

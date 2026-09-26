@@ -116,6 +116,20 @@ func TestStoreRoundTrip(t *testing.T) {
 	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE course_id = 91 AND elective_group_code = '1555S01' AND lab_hours IS NULL`); n != 1 {
 		t.Fatal("havuz dersi grubuna bağlanmadı")
 	}
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 91 AND program_id IS NULL`); n != 1 {
+		t.Fatal("havuz dersi planında göründüğü programa sahiplendirilmemeli")
+	}
+	// Sahibi bilinmeyen havuz dersinin detayı: içerik yazılır, katkı matrisi hiçbir programa bağlanmaz.
+	must(t, st.Course(ctx, 0, 91, &parse.CourseDetail{Name: "YAPAY ZEKA", Details: map[string]string{},
+		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},
+		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(4)}},
+		OutcomeMatrix:    []parse.MatrixCell{{LO: 1, PO: 1, Level: 4}}}, "u"))
+	if n := st.count(t, `SELECT count(*) FROM course_learning_outcomes WHERE course_id = 91`); n != 1 {
+		t.Fatal("sahipsiz ders içeriği yazılmadı")
+	}
+	if n := st.count(t, `SELECT (SELECT count(*) FROM course_program_outcomes WHERE course_id = 91) + (SELECT count(*) FROM course_outcome_matrix WHERE course_id = 91)`); n != 0 {
+		t.Fatal("sahipsiz dersin katkısı bir programa bağlandı")
+	}
 	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE course_id = 90 AND is_elective_group AND group_course_count = 2`); n != 1 {
 		t.Fatal("seçmeli grup satırı")
 	}
@@ -135,7 +149,7 @@ func TestStoreRoundTrip(t *testing.T) {
 		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "a"}, {No: 2, Description: "b"}},
 		WeeklyTopics:     []parse.WeeklyTopic{{Week: ip(1), Topic: "giriş"}},
 		Assessments:      []parse.Assessment{{Activity: "Vize", Percentage: fp(40)}},
-		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(5)}, {No: 4, Description: "matristen", Level: ip(2)}},
+		ProgramOutcomes:  []parse.OutcomeContribution{{No: 1, Level: ip(5)}, {No: 4, Description: "matristen", Level: ip(2)}, {No: 7}},
 		OutcomeMatrix:    []parse.MatrixCell{{LO: 1, PO: 1, Level: 5}, {LO: 2, PO: 1, Level: 3}, {LO: 1, PO: 6, Level: 1}},
 		TeachingMode:     "Yüz Yüze",
 	}

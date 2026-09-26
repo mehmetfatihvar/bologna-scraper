@@ -59,7 +59,11 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
 - Anahtarlar OİBS'nin kendi ID'leri → tekrar çalıştırmak kopya üretmez, günceller.
   Ders planı ve dersin alt tabloları her yazımda **değiştirilir** (plandan çıkan ders ilişkisi silinir).
 - Bir ders birden çok programın planında olabilir (`program_courses`); detay sayfası bir çalışmada
-  yalnızca bir kez indirilir. `courses.program_id` dersin sahibi (ilk yazan) programdır ve katkı matrisi o programın çıktılarına bağlanır.
+  yalnızca bir kez indirilir. `courses.program_id` dersin sahibidir ve katkı matrisi o programın çıktılarına bağlanır.
+  Seçmeli havuz dersleri (çoğu "ORTAK SEÇMELİ DERSLER" programına ait) planında göründükleri programa
+  **sahiplendirilmez**: sayfalarındaki P1…Pn o programın çıktılarıdır. Sahibi aynı taramadaysa ders onunla
+  indirilir; değilse tarama sonunda sahipsiz (`program_id IS NULL`) indirilir ve katkıları bağlanmaz.
+- Sitede boş olan katkı hücreleri ("katkı yok") satır olarak yazılmaz.
 - Seçmeli dersler iki katmanlıdır: grup satırı (`program_courses.is_elective_group`, kaç ders
   seçileceği `group_course_count`, ör. "NORMAL EĞİTİM PAKETİ" → 5) ve ona `elective_group_id` ile
   bağlı havuz dersleri. `v_curriculum` grup kodu/adını da gösterir. Grup satırlarının detay sayfası yoktur.

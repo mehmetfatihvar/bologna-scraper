@@ -180,6 +180,11 @@ func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curr
 			if e.Semester == 0 {
 				sem = nil
 			}
+			// Seçmeli havuz dersi bu programın değil (çoğunlukla "ORTAK SEÇMELİ DERSLER"in); sahiplenme.
+			owner := nzID(programID)
+			if e.GroupID != 0 {
+				owner = nil
+			}
 			// Ders plandaki güncel bilgilerle yazılır (plan ve detay sayfası aynı kaynaktan; en yeni değer kazanır,
 			// boş gelen alan eskisini silmez). Sahip program ilk yazanda kalır. Detay sayfası sonra zenginleştirir.
 			b.Queue(`
@@ -196,7 +201,7 @@ func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curr
 					credit         = COALESCE(EXCLUDED.credit, courses.credit),
 					ects           = COALESCE(EXCLUDED.ects, courses.ects),
 					updated_at     = now()`,
-				e.CourseID, programID, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
+				e.CourseID, owner, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
 			b.Queue(`
 				INSERT INTO program_courses (program_id, course_id, semester, course_type, delivery_mode,
 					is_elective_group, group_course_count, elective_group_id, ordinal)
@@ -236,7 +241,7 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 				details = EXCLUDED.details, source_url = EXCLUDED.source_url, teaching_mode = EXCLUDED.teaching_mode,
 				detail_scraped_at = now(), updated_at = now()
 			RETURNING program_id`,
-			courseID, programID, nz(d.Code), nz(d.Name), d.Semester, d.Theory, d.Practice, d.Credit, d.ECTS,
+			courseID, nzID(programID), nz(d.Code), nz(d.Name), d.Semester, d.Theory, d.Practice, d.Credit, d.ECTS,
 			nz(d.Language), nz(d.Level), nz(d.Department), nz(d.DeliveryMode), nz(d.Type), nz(d.Objective),
 			nz(d.Content), nz(d.Prerequisites), nz(d.Coordinator), nz(d.Instructors), nz(d.Assistants),
 			d.Details, nz(url), nz(d.TeachingMode)).Scan(&owner)
@@ -276,6 +281,9 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 		if owner != nil {
 			for _, oc := range d.ProgramOutcomes {
 				b.Queue(upsertOutcomeSQL, *owner, oc.No, nz(oc.Description), SourceCourseMatrix, sourcePriority(SourceCourseMatrix))
+				if oc.Level == nil { // sitede boş hücre = katkı yok; satır yazılmaz
+					continue
+				}
 				b.Queue(`
 					INSERT INTO course_program_outcomes (course_id, program_outcome_id, contribution)
 					SELECT $1, id, $4 FROM program_outcomes WHERE program_id = $2 AND no = $3

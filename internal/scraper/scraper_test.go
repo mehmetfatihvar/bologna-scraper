@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
 )
 
 // fixtureServer, parse/testdata altındaki sayfaları sayfa adına göre sunar ve istekleri sayar.
@@ -106,5 +107,60 @@ func TestCancelledRunStops(t *testing.T) {
 	refs, _ := sc.Discover(context.Background(), "lisans", "lis")
 	if st := sc.Run(ctx, refs); st.Programs != 0 {
 		t.Fatalf("iptal edilen çalışma program işledi: %+v", st)
+	}
+}
+
+// Gerçek BİLGİSAYAR MÜHENDİSLİĞİ planı: 43 doğrudan ders programa bağlanır; 285 seçmeli havuz dersi
+// (çoğu "ORTAK SEÇMELİ DERSLER"e ait) sahipsiz indirilir, 17 grup satırının detayı istenmez.
+func TestPoolCoursesNotClaimed(t *testing.T) {
+	real := filepath.Join("..", "parse", "testdata", "real")
+	pages := map[string]string{
+		"/progAbout.aspx":         "progAbout_1371.html",
+		"/progLearnOutcomes.aspx": "progLearnOutcomes_1371.html",
+		"/progCourses.aspx":       "progCourses_1371.html",
+		"/progCourseDetails.aspx": "progCourseDetails_1098805.html",
+	}
+	var mu sync.Mutex
+	detailHits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f, ok := pages[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		if f == pages["/progCourseDetails.aspx"] {
+			mu.Lock()
+			detailHits++
+			mu.Unlock()
+		}
+		b, _ := os.ReadFile(filepath.Join(real, f))
+		_, _ = w.Write(b)
+	}))
+	defer srv.Close()
+	c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
+	var out bytes.Buffer
+	sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2}
+	st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
+	if st.Errors != 0 || st.Courses != 328 || detailHits != 328 {
+		t.Fatalf("stats=%+v detay isteği=%d", st, detailHits)
+	}
+	owners := map[int64]int{}
+	dec := json.NewDecoder(&out)
+	for dec.More() {
+		var m struct {
+			Type string `json:"type"`
+			Data struct {
+				ProgramID int64 `json:"program_id"`
+			} `json:"data"`
+		}
+		if err := dec.Decode(&m); err != nil {
+			t.Fatal(err)
+		}
+		if m.Type == "course" {
+			owners[m.Data.ProgramID]++
+		}
+	}
+	if owners[1371] != 43 || owners[0] != 285 {
+		t.Fatalf("sahiplik: %v", owners)
 	}
 }
