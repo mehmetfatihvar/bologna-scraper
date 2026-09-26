@@ -119,6 +119,21 @@ func TestStoreRoundTrip(t *testing.T) {
 	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 91 AND program_id = 1`); n != 1 {
 		t.Fatal("havuz dersi planında göründüğü programa ait olmalı (OİBS her programa ayrı kopya koyar)")
 	}
+	// Paylaşımlı havuz: 93, program 2'deki kopya; içeriği 91'den alır, matrisi yazılmaz.
+	src := &parse.CourseDetail{Code: "1555101", Name: "YAPAY ZEKA", Department: "BİLGİSAYAR", Details: map[string]string{"Bölümü / Programı": "BİLGİSAYAR"},
+		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},
+		OutcomeMatrix:    []parse.MatrixCell{{LO: 1, PO: 1, Level: 3}}}
+	must(t, st.Course(ctx, 1, 91, src, "u"))
+	must(t, st.Course(ctx, 2, 93, src.AsCopyOf(91), "u"))
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 93 AND detail_source_id = 91 AND program_id = 2`); n != 1 {
+		t.Fatal("detail_source_id yazılmadı")
+	}
+	if n := st.count(t, `SELECT (SELECT count(*) FROM course_learning_outcomes WHERE course_id = 93)*10 + (SELECT count(*) FROM course_outcome_matrix WHERE course_id = 93)`); n != 10 {
+		t.Fatalf("kopya içerik/matris: %d", n)
+	}
+	if fresh, _ := st.CourseFresh(ctx, 93, time.Now().Add(-time.Hour)); !fresh {
+		t.Fatal("kopya taze sayılmalı")
+	}
 	// Sahibi bilinmeden yazılmış ders: içerik yazılır, katkısı bağlanmaz ve taze sayılmaz (yeniden indirilir).
 	must(t, st.Course(ctx, 0, 92, &parse.CourseDetail{Name: "SAHİPSİZ", Details: map[string]string{},
 		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},

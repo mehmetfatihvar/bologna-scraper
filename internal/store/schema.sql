@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS courses (
 CREATE INDEX IF NOT EXISTS courses_program_idx ON courses(program_id);
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS lab_hours INT;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS teaching_mode TEXT;
+-- İçerik aynı kodlu başka bir kopyanın sayfasından alındıysa o ders (bkz. --pool-details=shared).
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS detail_source_id BIGINT REFERENCES courses(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS courses_code_idx ON courses(code);
 CREATE INDEX IF NOT EXISTS courses_detail_scraped_idx ON courses(detail_scraped_at);
 

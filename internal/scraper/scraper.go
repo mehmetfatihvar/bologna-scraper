@@ -3,11 +3,13 @@ package scraper
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/url"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -44,6 +46,15 @@ type Sink interface {
 	Course(ctx context.Context, programID, courseID int64, d *parse.CourseDetail, url string) error
 }
 
+const (
+	PoolOff    = ""
+	PoolShared = "shared"
+	PoolAll    = "all"
+)
+
+// poolCopy, bir havuz dersinin bir programdaki kopyası.
+type poolCopy struct{ courseID, programID int64 }
+
 // FreshChecker, isteğe bağlı olarak Sink tarafından uygulanır: ders detayı
 // verilen zamandan sonra zaten yazılmışsa true döner (kesilen taramayı sürdürmek için).
 type FreshChecker interface {
@@ -56,11 +67,14 @@ type Scraper struct {
 	Log         *slog.Logger
 	Workers     int
 	SkipDetails bool
-	// PoolDetails: seçmeli havuz derslerinin detay sayfalarını da indir. Varsayılan kapalı: havuz dersleri
-	// plan satırı olarak (grup ilişkisi, AKTS, saatler) yine yazılır ama detayları indirilmez. Havuzlar
-	// çoğu programda aynı ortak seçmeli derslerin kopyalarıdır; tam lisans taramasında istek sayısını
-	// ~6 binden ~36 bine çıkarırlar.
-	PoolDetails bool
+	// PoolDetails: seçmeli havuz derslerinin detay sayfaları. OİBS havuz derslerini her programa ayrı kopya
+	// (ayrı curCourse) olarak koyar; lisansta ~30 bin kopya, ~4,6 bin farklı ders kodu vardır.
+	//   PoolOff    (""):       indirilmez; plan satırı (grup, AKTS, saatler) yine yazılır.
+	//   PoolShared ("shared"): her ders kodu bir kez indirilir. Kod tek programdaysa ders eksiksiz yazılır;
+	//                          birden çok programdaysa bir kopya eksiksiz, diğerlerine içerik (katkı matrisi
+	//                          hariç — o sayfadaki PÇ'ler kaynak programındır) detail_source_id ile yazılır.
+	//   PoolAll    ("all"):    her kopya ayrı indirilir (programa özel matrisler dahil, ~30 bin istek).
+	PoolDetails string
 	// FreshWithin > 0 ise, detayı bu süre içinde yazılmış dersler tekrar indirilmez.
 	FreshWithin time.Duration
 	OnError     func(url string, err error)
@@ -68,6 +82,8 @@ type Scraper struct {
 	programs, courses, skipped, errors atomic.Int64
 	done                               atomic.Int64 // biten program (başarılı/başarısız)
 	courseSeen                         sync.Map     // curCourse -> struct{}: aynı çalışmada bir kez indir
+	poolMu                             sync.Mutex
+	pools                              map[string][]poolCopy // PoolShared: ders kodu -> kopyalar
 }
 
 type Stats struct {
@@ -188,6 +204,9 @@ loop:
 	}
 	close(jobs)
 	wg.Wait()
+	if ctx.Err() == nil && !s.SkipDetails && s.PoolDetails == PoolShared {
+		s.runSharedPools(ctx)
+	}
 	return s.Stats()
 }
 
@@ -307,7 +326,9 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		}
 		switch {
 		case e.IsGroup: // seçmeli grup satırının detay sayfası yok
-		case e.GroupID != 0 && !s.PoolDetails:
+		case e.GroupID != 0 && s.PoolDetails == PoolShared:
+			s.addPoolCopy(e, ref.ID) // tüm programların planları okununca kod başına bir kez indirilir
+		case e.GroupID != 0 && s.PoolDetails != PoolAll:
 		default:
 			s.course(ctx, ref.ID, e.CourseID)
 		}
@@ -342,6 +363,118 @@ func (s *Scraper) course(ctx context.Context, ownerID, courseID int64) {
 	}
 	s.courses.Add(1)
 	s.Log.Debug("ders", "id", courseID, "sahip", ownerID, "kod", d.Code, "ad", d.Name)
+}
+
+func (s *Scraper) addPoolCopy(e parse.CurriculumEntry, programID int64) {
+	key := e.Code
+	if key == "" { // kodsuz satır başka kopyalarla eşleştirilemez
+		key = "id:" + id(e.CourseID)
+	}
+	s.poolMu.Lock()
+	defer s.poolMu.Unlock()
+	if s.pools == nil {
+		s.pools = map[string][]poolCopy{}
+	}
+	for _, c := range s.pools[key] {
+		if c.courseID == e.CourseID {
+			return
+		}
+	}
+	s.pools[key] = append(s.pools[key], poolCopy{e.CourseID, programID})
+}
+
+// runSharedPools, her havuz ders kodu için bir sayfa indirip tüm kopyalarına yazar.
+func (s *Scraper) runSharedPools(ctx context.Context) {
+	s.poolMu.Lock()
+	keys := make([]string, 0, len(s.pools))
+	copies := 0
+	for k, cs := range s.pools {
+		slices.SortFunc(cs, func(a, b poolCopy) int { return cmp.Compare(a.courseID, b.courseID) })
+		keys = append(keys, k)
+		copies += len(cs)
+	}
+	s.poolMu.Unlock()
+	if len(keys) == 0 {
+		return
+	}
+	slices.Sort(keys)
+	s.Log.Info("seçmeli havuz dersleri", "kopya", copies, "farklı_kod", len(keys))
+	start := time.Now()
+	var done atomic.Int64
+	jobs := make(chan string)
+	var wg sync.WaitGroup
+	for i := 0; i < max(s.Workers, 1); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for k := range jobs {
+				s.poolGroup(ctx, s.pools[k])
+				if n := done.Add(1); n%200 == 0 || n == int64(len(keys)) {
+					eta := time.Duration(float64(time.Since(start)) / float64(n) * float64(int64(len(keys))-n)).Round(time.Second)
+					s.Log.Info("havuz ilerleme", "biten_kod", n, "toplam_kod", len(keys), "ders", s.courses.Load(), "hata", s.errors.Load(), "kalan_süre", eta)
+				}
+			}
+		}()
+	}
+	for _, k := range keys {
+		if ctx.Err() != nil {
+			break
+		}
+		jobs <- k
+	}
+	close(jobs)
+	wg.Wait()
+}
+
+func (s *Scraper) poolGroup(ctx context.Context, all []poolCopy) {
+	// Aynı ID başka bir planda doğrudan ders olarak zaten indirildiyse (matrisiyle) dokunma.
+	var cs []poolCopy
+	for _, c := range all {
+		if _, dup := s.courseSeen.LoadOrStore(c.courseID, struct{}{}); !dup {
+			cs = append(cs, c)
+		}
+	}
+	if len(cs) == 0 {
+		return
+	}
+	stale := cs
+	if fc, ok := s.Sink.(FreshChecker); ok && s.FreshWithin > 0 {
+		stale = nil
+		since := time.Now().Add(-s.FreshWithin)
+		for _, c := range cs {
+			if fresh, err := fc.CourseFresh(ctx, c.courseID, since); err == nil && fresh {
+				s.skipped.Add(1)
+			} else {
+				stale = append(stale, c)
+			}
+		}
+		if len(stale) == 0 {
+			return
+		}
+	}
+	rep := cs[0] // en küçük ID: tekrar çalıştırmalarda aynı kopya kaynak olur
+	du := s.Client.URL(PageCourseDetail, url.Values{"curCourse": {id(rep.courseID)}})
+	b, err := s.Client.Get(ctx, du)
+	if err != nil {
+		s.fail(du, err)
+		return
+	}
+	d, err := parse.ParseCourseDetail(bytes.NewReader(b))
+	if err != nil {
+		s.fail(du, err)
+		return
+	}
+	for _, c := range stale {
+		cd := d
+		if c.courseID != rep.courseID {
+			cd = d.AsCopyOf(rep.courseID)
+		}
+		if err := s.Sink.Course(ctx, c.programID, c.courseID, cd, du); err != nil {
+			s.fail(du, err)
+			continue
+		}
+		s.courses.Add(1)
+	}
 }
 
 // JSONSink, veritabanı olmadan (--dry-run) sonuçları JSON satırları olarak yazar.

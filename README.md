@@ -28,7 +28,8 @@ Docker ile hepsi birden: `docker compose run --rm scraper scrape --all`
 | `bologna scrape -l lisans,onlisans -w 3` | Seviye(ler)in tümü |
 | `bologna scrape --all --rps 1.5` | Her şey |
 | `bologna scrape --all --fresh-within 24h` | Kesilen taramayı sürdürür: son 24 saatte yazılmış ders detaylarını atlar |
-| `bologna scrape -l lisans --pool-details --rps 1` | Seçmeli havuz derslerinin detay sayfalarını da indirir (varsayılan: indirmez) |
+| `bologna scrape -l lisans --pool-details` | Seçmeli havuz detayları: her ders kodu **bir kez** indirilir, kopyalara yazılır (varsayılan: indirmez) |
+| `bologna scrape -l lisans --pool-details=all --rps 1` | Havuz detayları: her kopya ayrı indirilir (~30 bin sayfa) |
 | `bologna scrape --from-file progs.json` | `discover --json` çıktısından |
 | `bologna scrape -p 352 --dry-run \| jq` | DB'ye yazmadan JSON |
 | `bologna inspect "progCourses.aspx?curSunit=352"` | Sayfayı parser'ın gözünden gösterir |
@@ -48,7 +49,15 @@ rağmen sunucu kaynaklı başarısız olursa **tüm istekler** 30 sn durur; hata
 grupta kaç ders seçilir, AKTS, saatler, öğretim şekli) ama **detay sayfaları indirilmez**. Havuzlar her programa
 kopyalanmış ortak seçmeli derslerdir: lisans planları ~38 bin satırdır, bunun ~32 bini havuz dersidir. Varsayılan
 tam lisans taraması (~6 bin ders sayfası) yaklaşık 1 saat, sonraki güncellemeler (`--fresh-within`) birkaç
-dakika sürer. Havuz detayları için `--pool-details` (~30 bin sayfa daha; tercihen gece, `--rps 1`).
+dakika sürer.
+
+Havuz detayları için `--pool-details` (= `shared`): programlar bittikten sonra her farklı havuz ders kodu
+**bir kez** indirilir (lisansta 29.616 kopya yerine ~4.600 sayfa, 2 istek/sn ile ~40 dk). Aynı kodlu kopyaların
+sayfaları aynıdır; yalnızca "Bölümü / Programı" alanı ve katkı matrisindeki P1…Pn (o programın çıktıları) farklıdır.
+Bu yüzden en küçük ID'li kopya kaynak olur ve tam yazılır; diğer kopyalara içerik (öğrenme çıktıları, haftalık
+konular, değerlendirme, iş yükü...) aynen yazılır, `courses.detail_source_id` kaynağı gösterir, **katkı matrisi
+yazılmaz** (havuz derslerinin matrisi sitede de genelde boştur). Her kopyanın kendi programına ait matrisi
+gerekiyorsa `--pool-details=all` her kopyayı ayrı indirir (~30 bin sayfa; tercihen gece, `--rps 1`).
 
 ## Veri modeli
 
@@ -92,7 +101,8 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
   bilgi ikonundadır. Ders planı başlığı ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") ikinci kaynaktır.
 - Sayfalarda `<meta charset>` yok; sunucu başlığı yoksa geçerli UTF-8 olduğu varsayılır.
 - "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) her programda aynı dersleri içerir ama her programa ayrı
-  ID'lerle kopyalanmıştır (lisansta 29 bini aşkın farklı havuz ID'si); bu yüzden varsayılan taramada detayları indirilmez.
+  ID'lerle kopyalanmıştır (lisansta 29.616 havuz satırı, 4.574 farklı kod); bu yüzden varsayılan taramada detayları
+  indirilmez, `--pool-details` ise her kodu bir kez indirir.
 - Uzun taramalarda (~1 saat, binlerce istek) sunucu 503 dönmeye başlayabilir; istemci bu durumda tüm istekleri bekletir.
 
 ## Parser nasıl çalışır / siteye uyarlama

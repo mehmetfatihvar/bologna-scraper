@@ -83,6 +83,24 @@ type CourseDetail struct {
 	Workloads        []Workload            `json:"workloads,omitempty"`
 	ProgramOutcomes  []OutcomeContribution `json:"program_outcomes,omitempty"`
 	OutcomeMatrix    []MatrixCell          `json:"outcome_matrix,omitempty"`
+
+	// SourceCourseID: içerik başka bir kopyanın sayfasından alındıysa o dersin ID'si (scraper doldurur).
+	SourceCourseID int64 `json:"source_course_id,omitempty"`
+}
+
+// AsCopyOf, aynı kodlu başka bir programın kopyası için içeriği paylaşan bir detay döndürür: ders içeriği
+// aynen alınır; programa özel olan katkı matrisi ve "Bölümü / Programı" bilgisi alınmaz.
+func (c *CourseDetail) AsCopyOf(sourceID int64) *CourseDetail {
+	cp := *c
+	cp.ProgramOutcomes, cp.OutcomeMatrix, cp.Department = nil, nil, ""
+	cp.Details = make(map[string]string, len(c.Details))
+	for k, v := range c.Details {
+		if Norm(k) != "bolumu / programi" {
+			cp.Details[k] = v
+		}
+	}
+	cp.SourceCourseID = sourceID
+	return &cp
 }
 
 var courseDetailRules = []sectionRule2{

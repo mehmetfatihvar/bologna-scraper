@@ -112,19 +112,19 @@ func TestCancelledRunStops(t *testing.T) {
 
 // Gerçek BİLGİSAYAR MÜHENDİSLİĞİ planı: 43 doğrudan ders + 285 seçmeli havuz dersi. OİBS havuz
 // derslerini her programa ayrı kopya (curCourse) olarak koyar; hepsi bu programa aittir.
-// 17 grup satırının detay sayfası yoktur. Varsayılan (PoolDetails=false) yalnızca 43 detay indirir.
+// 17 grup satırının detay sayfası yoktur. Varsayılan (PoolOff) yalnızca 43 detay indirir.
 func TestRealPlanDetailsAndOwnership(t *testing.T) {
 	for _, tc := range []struct {
-		poolDetails bool
+		poolDetails string
 		wantDetails int
-	}{{true, 328}, {false, 43}} {
+	}{{PoolAll, 328}, {PoolOff, 43}} {
 		srv, hits := realSite(t)
 		c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
 		var out bytes.Buffer
 		sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 2, PoolDetails: tc.poolDetails}
 		st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}})
 		if st.Errors != 0 || st.Courses != int64(tc.wantDetails) || hits() != tc.wantDetails {
-			t.Fatalf("poolDetails=%v stats=%+v detay isteği=%d", tc.poolDetails, st, hits())
+			t.Fatalf("poolDetails=%q stats=%+v detay isteği=%d", tc.poolDetails, st, hits())
 		}
 		owners := map[int64]int{}
 		dec := json.NewDecoder(&out)
@@ -145,6 +145,74 @@ func TestRealPlanDetailsAndOwnership(t *testing.T) {
 		if len(owners) != 1 || owners[1371] != tc.wantDetails {
 			t.Fatalf("sahiplik: %v", owners)
 		}
+	}
+}
+
+// Paylaşımlı mod: iki program aynı havuzu (aynı kodlar, farklı curCourse ID'leri) içerir.
+// Her havuz kodu bir kez indirilir; ikinci programın kopyası içeriği alır, matrisi almaz.
+func TestSharedPoolDetails(t *testing.T) {
+	srv, hits := realSite(t)
+	c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
+	var out bytes.Buffer
+	sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Workers: 3, PoolDetails: PoolShared}
+	st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1371, UnitID: 22}, {ID: 2371, UnitID: 22}})
+
+	b, _ := os.ReadFile(filepath.Join("..", "parse", "testdata", "real", "progCourses_1371.html"))
+	cur, err := parse.ParseCurriculum(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	codes := map[string]bool{}
+	pool := 0
+	for _, e := range cur.Entries {
+		if !e.IsGroup && e.GroupID != 0 {
+			pool++
+			codes[e.Code] = true
+		}
+	}
+	// 43 doğrudan ders × 2 program + her farklı havuz kodu bir kez
+	if want := 2*43 + len(codes); hits() != want {
+		t.Fatalf("detay isteği=%d, beklenen %d", hits(), want)
+	}
+	if want := int64(2*43 + 2*pool); st.Errors != 0 || st.Courses != want {
+		t.Fatalf("stats=%+v, beklenen ders yazımı %d", st, want)
+	}
+
+	copies, withMatrix := 0, 0
+	dec := json.NewDecoder(&out)
+	for dec.More() {
+		var m struct {
+			Type string `json:"type"`
+			Data struct {
+				ProgramID int64 `json:"program_id"`
+				CourseID  int64 `json:"course_id"`
+				Course    struct {
+					SourceCourseID int64           `json:"source_course_id"`
+					Department     string          `json:"department"`
+					OutcomeMatrix  json.RawMessage `json:"outcome_matrix"`
+				} `json:"course"`
+			} `json:"data"`
+		}
+		if err := dec.Decode(&m); err != nil {
+			t.Fatal(err)
+		}
+		if m.Type != "course" {
+			continue
+		}
+		if src := m.Data.Course.SourceCourseID; src != 0 {
+			copies++
+			if m.Data.ProgramID != 2371 || src == m.Data.CourseID || m.Data.Course.Department != "" || len(m.Data.Course.OutcomeMatrix) > 0 {
+				t.Fatalf("kopya hatalı: %+v", m.Data)
+			}
+		} else if len(m.Data.Course.OutcomeMatrix) > 0 {
+			withMatrix++
+		}
+	}
+	if copies != pool {
+		t.Fatalf("kopya=%d, beklenen %d", copies, pool)
+	}
+	if withMatrix == 0 {
+		t.Fatal("kaynak derslerde matris yok")
 	}
 }
 
@@ -172,6 +240,10 @@ func realSite(t *testing.T) (*httptest.Server, func() int) {
 			mu.Unlock()
 		}
 		b, _ := os.ReadFile(filepath.Join(real, f))
+		if r.URL.Query().Get("curSunit") == "2371" {
+			// ikinci program: aynı plan, farklı ders ID'leri (OİBS havuz kopyaları gibi)
+			b = bytes.ReplaceAll(b, []byte("prolizOpenCourseDetails(1"), []byte("prolizOpenCourseDetails(9"))
+		}
 		_, _ = w.Write(b)
 	}))
 	t.Cleanup(srv.Close)

@@ -226,7 +226,7 @@ func scrapeCmd() *cobra.Command {
 		workers     int
 		limit       int
 		skipDetails bool
-		poolDetails bool
+		poolDetails string
 		freshWithin time.Duration
 		dryRun      bool
 	)
@@ -239,7 +239,8 @@ func scrapeCmd() *cobra.Command {
   bologna scrape --all --rps 1.5
   bologna scrape --from-file programlar.json      # discover --json çıktısı
   bologna scrape --all --fresh-within 24h        # kesilen taramayı sürdür
-  bologna scrape -l lisans --pool-details --rps 1 # seçmeli havuz detayları da (uzun sürer)
+  bologna scrape -l lisans --pool-details         # havuz detayları: her ders kodu bir kez
+  bologna scrape -l lisans --pool-details=all     # havuz detayları: her kopya ayrı (çok uzun)
   bologna scrape --program 352 --dry-run | jq .   # DB'ye yazmadan JSON göster`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
@@ -247,6 +248,11 @@ func scrapeCmd() *cobra.Command {
 			c, err := client()
 			if err != nil {
 				return err
+			}
+			switch poolDetails {
+			case scraper.PoolOff, scraper.PoolShared, scraper.PoolAll:
+			default:
+				return fmt.Errorf("--pool-details %q: shared veya all olmalı", poolDetails)
 			}
 			sc := &scraper.Scraper{Client: c, Log: log, Workers: workers, SkipDetails: skipDetails, PoolDetails: poolDetails, FreshWithin: freshWithin}
 
@@ -338,7 +344,8 @@ func scrapeCmd() *cobra.Command {
 	fl.IntVarP(&workers, "workers", "w", 2, "paralel işlenecek program sayısı")
 	fl.IntVar(&limit, "limit", 0, "en fazla N program işle (test için)")
 	fl.BoolVar(&skipDetails, "skip-details", false, "ders detay sayfalarını atla (sadece program + ders planı)")
-	fl.BoolVar(&poolDetails, "pool-details", false, "seçmeli havuz derslerinin detay sayfalarını da indir (varsayılan: yalnızca plan satırı; tam lisans taramasında istekleri ~6 binden ~36 bine çıkarır)")
+	fl.StringVar(&poolDetails, "pool-details", "", "seçmeli havuz derslerinin detay sayfaları: boş = indirme, shared = her ders kodu bir kez (~4,6 bin istek; kopyalara içerik yazılır, matris yazılmaz), all = her kopya ayrı (~30 bin istek)")
+	fl.Lookup("pool-details").NoOptDefVal = scraper.PoolShared
 	fl.DurationVar(&freshWithin, "fresh-within", 0, "detayı bu süre içinde yazılmış dersleri atla (ör. 24h; kesilen taramayı sürdürmek için)")
 	fl.BoolVar(&dryRun, "dry-run", false, "veritabanına yazma; sonuçları JSON satırları olarak stdout'a bas")
 	return cmd
