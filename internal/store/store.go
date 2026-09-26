@@ -219,8 +219,8 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 		err := tx.QueryRow(ctx, `
 			INSERT INTO courses (id, program_id, code, name, semester, theory_hours, practice_hours, credit, ects,
 				language, level, department, delivery_mode, course_type, objective, content, prerequisites,
-				coordinator, instructors, assistants, details, source_url, teaching_mode, detail_source_id, detail_scraped_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24, now())
+				coordinator, instructors, assistants, details, source_url, teaching_mode, detail_source_id, detail_empty, detail_scraped_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25, now())
 			ON CONFLICT (id) DO UPDATE SET
 				program_id     = COALESCE(courses.program_id, EXCLUDED.program_id),
 				code           = COALESCE(EXCLUDED.code, courses.code),
@@ -235,13 +235,13 @@ func (s *Store) Course(ctx context.Context, programID, courseID int64, d *parse.
 				objective = EXCLUDED.objective, content = EXCLUDED.content, prerequisites = EXCLUDED.prerequisites,
 				coordinator = EXCLUDED.coordinator, instructors = EXCLUDED.instructors, assistants = EXCLUDED.assistants,
 				details = EXCLUDED.details, source_url = EXCLUDED.source_url, teaching_mode = EXCLUDED.teaching_mode,
-				detail_source_id = EXCLUDED.detail_source_id,
+				detail_source_id = EXCLUDED.detail_source_id, detail_empty = EXCLUDED.detail_empty,
 				detail_scraped_at = now(), updated_at = now()
 			RETURNING program_id`,
 			courseID, nzID(programID), nz(d.Code), nz(d.Name), d.Semester, d.Theory, d.Practice, d.Credit, d.ECTS,
 			nz(d.Language), nz(d.Level), nz(d.Department), nz(d.DeliveryMode), nz(d.Type), nz(d.Objective),
 			nz(d.Content), nz(d.Prerequisites), nz(d.Coordinator), nz(d.Instructors), nz(d.Assistants),
-			d.Details, nz(url), nz(d.TeachingMode), nzID(d.SourceCourseID)).Scan(&owner)
+			d.Details, nz(url), nz(d.TeachingMode), nzID(d.SourceCourseID), d.Empty).Scan(&owner)
 		if err != nil {
 			return fmt.Errorf("course upsert: %w", err)
 		}

@@ -134,6 +134,25 @@ func TestStoreRoundTrip(t *testing.T) {
 	if fresh, _ := st.CourseFresh(ctx, 93, time.Now().Add(-time.Hour)); !fresh {
 		t.Fatal("kopya taze sayılmalı")
 	}
+	// Sitede boş ders sayfası: detail_empty işaretlenir, sonraki dolu yazımda kalkar.
+	must(t, st.Course(ctx, 1, 94, &parse.CourseDetail{Details: map[string]string{}, Empty: true}, "u"))
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 94 AND detail_empty`); n != 1 {
+		t.Fatal("detail_empty yazılmadı")
+	}
+	must(t, st.Course(ctx, 1, 94, &parse.CourseDetail{Name: "DOLU", Details: map[string]string{}}, "u"))
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 94 AND NOT detail_empty`); n != 1 {
+		t.Fatal("detail_empty sıfırlanmadı")
+	}
+	// Sütundan önce yazılmış boş sayfa: Migrate işaretler, dolu ders etkilenmez; tekrar çalışması zararsız.
+	must(t, st.Course(ctx, 1, 95, &parse.CourseDetail{Details: map[string]string{"tablo: Dersin Ayrıntıları": "Kayıt Yok..."}}, "u"))
+	must(t, st.Migrate(ctx))
+	must(t, st.Migrate(ctx))
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 95 AND detail_empty AND details = '{}'::jsonb`); n != 1 {
+		t.Fatal("eski boş sayfa işaretlenmedi")
+	}
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id IN (91, 94) AND detail_empty`); n != 0 {
+		t.Fatal("dolu ders boş işaretlendi")
+	}
 	// Sahibi bilinmeden yazılmış ders: içerik yazılır, katkısı bağlanmaz ve taze sayılmaz (yeniden indirilir).
 	must(t, st.Course(ctx, 0, 92, &parse.CourseDetail{Name: "SAHİPSİZ", Details: map[string]string{},
 		LearningOutcomes: []parse.LearningOutcome{{No: 1, Description: "x"}},

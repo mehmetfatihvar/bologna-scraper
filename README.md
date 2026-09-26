@@ -84,6 +84,8 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
   seçileceği `group_course_count`, ör. "NORMAL EĞİTİM PAKETİ" → 5) ve ona `elective_group_id` ile
   bağlı havuz dersleri. `v_curriculum` grup kodu/adını da gösterir. Grup satırlarının detay sayfası yoktur.
 - `programs.curriculum_year`: taranan ders planının yılı (sitede seçili olan, genelde en güncel).
+- `courses.detail_empty`: sitede ders sayfası boş ("Dersin Ayrıntıları: Kayıt Yok..."). Lisansta öğrenme
+  çıktısı olmayan havuz derslerinin neredeyse tamamı böyledir; kod, ad, AKTS ve saatler yine ders planından gelir.
 - `units.levels` bir dizidir: enstitüler hem yüksek lisans hem doktora programı barındırır.
 - Program çıktısı açıklamaları üç kaynaktan gelir, öncelik sırası: `outcomes_page` > `course_matrix` > `about_text` (`program_outcomes.source`).
   Resmî çıktı sayfası geldiğinde metinden tahmin edilip listede olmayan maddeler silinir.

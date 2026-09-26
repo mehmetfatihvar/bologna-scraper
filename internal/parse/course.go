@@ -86,6 +86,8 @@ type CourseDetail struct {
 
 	// SourceCourseID: içerik başka bir kopyanın sayfasından alındıysa o dersin ID'si (scraper doldurur).
 	SourceCourseID int64 `json:"source_course_id,omitempty"`
+	// Empty: sitede ders için içerik girilmemiş ("Dersin Ayrıntıları: Kayıt Yok...").
+	Empty bool `json:"empty,omitempty"`
 }
 
 // AsCopyOf, aynı kodlu başka bir programın kopyası için içeriği paylaşan bir detay döndürür: ders içeriği
@@ -194,7 +196,33 @@ func ParseCourseDetail(r io.Reader) (*CourseDetail, error) {
 			}
 		}
 	}
+	markEmpty(c)
 	return c, nil
+}
+
+// markEmpty, içerik girilmemiş sayfaları işaretler. OİBS bu durumda yalnızca "Kayıt Yok..." yazan bir
+// tablo (ve kopyalarda boş katkılı P1…Pn listesi) gösterir; bu yer tutucu metin Details'e yazılmaz.
+func markEmpty(c *CourseDetail) {
+	if c.Code != "" || c.Name != "" || len(c.LearningOutcomes) > 0 || len(c.WeeklyTopics) > 0 ||
+		len(c.Assessments) > 0 || len(c.Workloads) > 0 || len(c.Resources) > 0 || len(c.OutcomeMatrix) > 0 {
+		return
+	}
+	for _, oc := range c.ProgramOutcomes {
+		if oc.Level != nil {
+			return
+		}
+	}
+	placeholder := false
+	for k, v := range c.Details {
+		switch nv := Norm(v); {
+		case strings.HasPrefix(nv, "kayit yok"):
+			placeholder = true
+			delete(c.Details, k)
+		case nv != "":
+			return // tanınmayan ama dolu bir alan var
+		}
+	}
+	c.Empty = placeholder
 }
 
 func hasSummaryHeader(t *Table) bool {

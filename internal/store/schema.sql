@@ -81,6 +81,8 @@ ALTER TABLE courses ADD COLUMN IF NOT EXISTS lab_hours INT;
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS teaching_mode TEXT;
 -- İçerik aynı kodlu başka bir kopyanın sayfasından alındıysa o ders (bkz. --pool-details=shared).
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS detail_source_id BIGINT REFERENCES courses(id) ON DELETE SET NULL;
+-- sitede ders sayfası boş ("Dersin Ayrıntıları: Kayıt Yok...")
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS detail_empty BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS courses_code_idx ON courses(code);
 CREATE INDEX IF NOT EXISTS courses_detail_scraped_idx ON courses(detail_scraped_at);
 
@@ -229,3 +231,12 @@ FROM course_outcome_matrix m
 JOIN courses c           ON c.id = m.course_id
 JOIN program_outcomes po ON po.id = m.program_outcome_id
 LEFT JOIN course_learning_outcomes lo ON lo.course_id = m.course_id AND lo.no = m.lo_no;
+
+-- Bu sütundan önce yazılmış boş sayfaları işaretle (yer tutucu metin details'ten silinir; tekrar çalışınca eşleşmez).
+UPDATE courses c SET detail_empty = true, details = '{}'::jsonb
+WHERE NOT c.detail_empty AND c.detail_scraped_at IS NOT NULL AND c.details <> '{}'::jsonb
+  AND NOT EXISTS (SELECT 1 FROM jsonb_each_text(c.details) kv WHERE kv.value NOT LIKE 'Kayıt Yok%')
+  AND NOT EXISTS (SELECT 1 FROM course_learning_outcomes x WHERE x.course_id = c.id)
+  AND NOT EXISTS (SELECT 1 FROM course_weekly_topics x WHERE x.course_id = c.id)
+  AND NOT EXISTS (SELECT 1 FROM course_assessments x WHERE x.course_id = c.id)
+  AND NOT EXISTS (SELECT 1 FROM course_workloads x WHERE x.course_id = c.id);

@@ -88,6 +88,29 @@ func TestCourseDetail(t *testing.T) {
 	}
 }
 
+// İçerik girilmemiş ders sayfası: yalnızca "Kayıt Yok..." tablosu ve boş katkılı PÇ listesi.
+func TestEmptyCourseDetail(t *testing.T) {
+	page := `<html><body>
+<div>Dersin Ayrıntıları</div><table><tr><td>Kayıt Yok...</td></tr></table>
+<div>Program Çıktıları ile İlişkisi</div>
+<table><tr><th></th><th>P1</th><th>P2</th></tr><tr><td>Ö1</td><td></td><td></td></tr></table>
+</body></html>`
+	d, err := ParseCourseDetail(strings.NewReader(page))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !d.Empty || len(d.Details) != 0 {
+		t.Fatalf("boş sayfa işaretlenmedi: empty=%v details=%v", d.Empty, d.Details)
+	}
+	full, err := ParseCourseDetail(bytes.NewReader(fixture(t, "progCourseDetails.aspx")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if full.Empty {
+		t.Fatal("dolu sayfa boş sayıldı")
+	}
+}
+
 func TestMatrixNumericLayout(t *testing.T) {
 	html := `<div>Program Çıktıları ile İlişkisi</div><table>
 	<tr><th>No</th><th>Program Çıktısı</th><th>Katkı Düzeyi</th></tr>
