@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/url"
@@ -95,6 +96,9 @@ func (s *Scraper) Stats() Stats {
 }
 
 func (s *Scraper) fail(u string, err error) {
+	if errors.Is(err, context.Canceled) { // kullanıcı durdurdu: çalışma zaten "interrupted" olarak kaydedilir
+		return
+	}
 	s.errors.Add(1)
 	s.Log.Warn("hata", "url", u, "err", err)
 	if s.OnError != nil {

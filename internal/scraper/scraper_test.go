@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -107,6 +108,12 @@ func TestCancelledRunStops(t *testing.T) {
 	refs, _ := sc.Discover(context.Background(), "lisans", "lis")
 	if st := sc.Run(ctx, refs); st.Programs != 0 {
 		t.Fatalf("iptal edilen çalışma program işledi: %+v", st)
+	}
+	// İptal edilen istekler hata sayılmaz ve kaydedilmez.
+	sc.OnError = func(string, error) { t.Fatal("iptal hata olarak kaydedildi") }
+	sc.fail("u", fmt.Errorf("GET u: %w", context.Canceled))
+	if st := sc.Stats(); st.Errors != 0 {
+		t.Fatalf("iptal hata sayıldı: %+v", st)
 	}
 }
 
