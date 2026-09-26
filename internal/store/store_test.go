@@ -98,13 +98,31 @@ func TestStoreRoundTrip(t *testing.T) {
 	}
 
 	// Ders planı: ortak ders (10) iki programda; ikinci çalıştırma planı değiştirir.
-	must(t, st.Curriculum(ctx, 1, []parse.CurriculumEntry{
-		{CourseID: 10, Semester: 1, Code: "MAT501", Name: "İleri Matematik", Type: "zorunlu", ECTS: fp(7.5)},
+	year := 2026
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &year, Entries: []parse.CurriculumEntry{
+		{CourseID: 10, Semester: 1, Code: "MAT501", Name: "İleri Matematik", Type: "zorunlu", ECTS: fp(7.5), Lab: ip(2), Delivery: "Yüz Yüze"},
 		{CourseID: 11, Semester: 2, Code: "MAT502"},
-	}))
-	must(t, st.Curriculum(ctx, 2, []parse.CurriculumEntry{{CourseID: 10, Type: "secmeli"}}))
-	must(t, st.Curriculum(ctx, 1, []parse.CurriculumEntry{{CourseID: 10, Semester: 1, Type: "zorunlu"}}))
-	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE program_id = 1`); n != 1 {
+	}}))
+	must(t, st.Curriculum(ctx, 2, &parse.Curriculum{Entries: []parse.CurriculumEntry{{CourseID: 10, Type: "secmeli"}}}))
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Entries: []parse.CurriculumEntry{
+		{CourseID: 10, Semester: 1, Type: "zorunlu"},
+		// seçmeli grup + havuz dersi
+		{CourseID: 90, Semester: 5, Code: "1555S01", Name: "TEKNİK SEÇMELİ DERS", Type: "secmeli", IsGroup: true, GroupCount: ip(2)},
+		{CourseID: 91, Semester: 5, Code: "1555101", Name: "YAPAY ZEKA", Type: "secmeli", GroupID: 90},
+	}}))
+	if n := st.count(t, `SELECT count(*) FROM programs WHERE id = 1 AND curriculum_year = 2026`); n != 1 {
+		t.Fatal("curriculum_year yazılmadı")
+	}
+	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE course_id = 91 AND elective_group_code = '1555S01' AND lab_hours IS NULL`); n != 1 {
+		t.Fatal("havuz dersi grubuna bağlanmadı")
+	}
+	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE course_id = 90 AND is_elective_group AND group_course_count = 2`); n != 1 {
+		t.Fatal("seçmeli grup satırı")
+	}
+	if n := st.count(t, `SELECT count(*) FROM courses WHERE id = 10 AND lab_hours = 2`); n != 1 {
+		t.Fatal("lab_hours")
+	}
+	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE program_id = 1 AND course_id = 11`); n != 0 {
 		t.Fatalf("plandan çıkan ders silinmedi: %d", n)
 	}
 	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE course_id = 10`); n != 2 {

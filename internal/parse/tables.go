@@ -22,6 +22,7 @@ type Cell struct {
 type Row struct {
 	Cells []Cell   `json:"cells"`
 	Refs  []string `json:"refs,omitempty"`
+	Class string   `json:"class,omitempty"` // <tr class>: OİBS seçmeli havuz satırlarını "collapse_<grup>" ile işaretler
 }
 
 func (r Row) IsHeader() bool {
@@ -246,7 +247,7 @@ func parseRow(tr *html.Node) Row {
 			break
 		}
 	}
-	row := Row{Refs: refsOf(tr, true)}
+	row := Row{Refs: refsOf(tr, true), Class: attr(tr, "class")}
 	for c := tr.FirstChild; c != nil; c = c.NextSibling {
 		if c.Type != html.ElementNode || (c.DataAtom != atom.Td && c.DataAtom != atom.Th) {
 			continue

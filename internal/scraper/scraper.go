@@ -39,7 +39,7 @@ type Sink interface {
 	Unit(ctx context.Context, id int64, name, level string) error
 	Program(ctx context.Context, ref parse.ProgramRef, p *parse.Program, url string) error
 	ProgramOutcomes(ctx context.Context, programID int64, outs []parse.Outcome, source string) error
-	Curriculum(ctx context.Context, programID int64, entries []parse.CurriculumEntry) error
+	Curriculum(ctx context.Context, programID int64, cur *parse.Curriculum) error
 	Course(ctx context.Context, programID, courseID int64, d *parse.CourseDetail, url string) error
 }
 
@@ -275,7 +275,14 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 			entries = append(entries, e)
 		}
 	}
-	if err := s.Sink.Curriculum(ctx, ref.ID, entries); err != nil {
+	cur.Entries = entries
+	// Birim adı keşif sayfasında güvenilir değil; ders planı başlığı ("FAKÜLTE / PROGRAM - Dersler") kesin kaynak.
+	if ref.UnitID != 0 && cur.UnitName != "" && cur.UnitName != ref.UnitName {
+		if err := s.Sink.Unit(ctx, ref.UnitID, cur.UnitName, ref.Level); err != nil {
+			s.fail("unit:"+id(ref.UnitID), err)
+		}
+	}
+	if err := s.Sink.Curriculum(ctx, ref.ID, cur); err != nil {
 		s.fail(curURL, err)
 		return
 	}
@@ -292,6 +299,9 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 	for _, e := range entries {
 		if ctx.Err() != nil {
 			return
+		}
+		if e.IsGroup { // seçmeli grup satırının detay sayfası yok
+			continue
 		}
 		if _, dup := s.courseSeen.LoadOrStore(e.CourseID, struct{}{}); dup {
 			continue
@@ -349,8 +359,8 @@ func (j *JSONSink) Program(_ context.Context, ref parse.ProgramRef, p *parse.Pro
 func (j *JSONSink) ProgramOutcomes(_ context.Context, pid int64, outs []parse.Outcome, src string) error {
 	return j.emit("program_outcomes", map[string]any{"program_id": pid, "source": src, "outcomes": outs})
 }
-func (j *JSONSink) Curriculum(_ context.Context, pid int64, es []parse.CurriculumEntry) error {
-	return j.emit("curriculum", map[string]any{"program_id": pid, "entries": es})
+func (j *JSONSink) Curriculum(_ context.Context, pid int64, cur *parse.Curriculum) error {
+	return j.emit("curriculum", map[string]any{"program_id": pid, "curriculum": cur})
 }
 func (j *JSONSink) Course(_ context.Context, pid, cid int64, d *parse.CourseDetail, u string) error {
 	return j.emit("course", map[string]any{"program_id": pid, "course_id": cid, "course": d, "url": u})

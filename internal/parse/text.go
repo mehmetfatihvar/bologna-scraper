@@ -116,9 +116,19 @@ func OrdinalNo(s string) (int, bool) {
 
 // SplitTU, "3+0" veya "2+2+0" biçimindeki teorik/uygulama saatlerini ayırır.
 func SplitTU(s string) (t, u *int) {
+	t, u, _ = SplitTUL(s)
+	return t, u
+}
+
+// SplitTUL, "3+2+0" (teorik+uygulama+laboratuvar) biçimini ayırır; lab yoksa nil döner.
+func SplitTUL(s string) (t, u, l *int) {
 	parts := strings.Split(s, "+")
 	if len(parts) < 2 {
-		return nil, nil
+		return nil, nil, nil
 	}
-	return Int(parts[0]), Int(parts[1])
+	t, u = Int(parts[0]), Int(parts[1])
+	if len(parts) > 2 {
+		l = Int(parts[2])
+	}
+	return t, u, l
 }

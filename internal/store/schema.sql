@@ -30,12 +30,14 @@ CREATE TABLE IF NOT EXISTS programs (
     graduation          TEXT,
     employment          TEXT,
     assessment          TEXT,
+    curriculum_year     INT,                     -- scrape edilen ders planının yılı (sitede seçili olan)
     info                JSONB NOT NULL DEFAULT '{}'::jsonb,   -- ham anahtar/değer
     sections            JSONB NOT NULL DEFAULT '{}'::jsonb,   -- tüm bölümler, ham
     source_url          TEXT,
     scraped_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS programs_unit_idx ON programs(unit_id);
+ALTER TABLE programs ADD COLUMN IF NOT EXISTS curriculum_year INT;
 
 CREATE TABLE IF NOT EXISTS program_outcomes (
     id          BIGSERIAL PRIMARY KEY,
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS courses (
     semester           INT,
     theory_hours       INT,
     practice_hours     INT,
+    lab_hours          INT,
     credit             NUMERIC(6,2),
     ects               NUMERIC(6,2),
     language           TEXT,
@@ -73,19 +76,31 @@ CREATE TABLE IF NOT EXISTS courses (
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS courses_program_idx ON courses(program_id);
+ALTER TABLE courses ADD COLUMN IF NOT EXISTS lab_hours INT;
 CREATE INDEX IF NOT EXISTS courses_code_idx ON courses(code);
 CREATE INDEX IF NOT EXISTS courses_detail_scraped_idx ON courses(detail_scraped_at);
 
 -- Ders planı: bir ders birden fazla programın planında yer alabilir (N:M).
+-- Seçmeli dersler iki katmanlıdır: grup satırı (is_elective_group, kaç ders seçileceği
+-- group_course_count) ve ona elective_group_id ile bağlı havuz dersleri.
 CREATE TABLE IF NOT EXISTS program_courses (
-    program_id   BIGINT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-    course_id    BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    semester     INT,
-    course_type  TEXT,
-    ordinal      INT,
+    program_id          BIGINT NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    course_id           BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    semester            INT,
+    course_type         TEXT,
+    delivery_mode       TEXT,                    -- Öğretim Şekli: Yüz Yüze | Uzaktan …
+    is_elective_group   BOOLEAN NOT NULL DEFAULT false,
+    group_course_count  INT,                     -- grup satırında: seçilecek ders adedi
+    elective_group_id   BIGINT,                  -- havuz dersinde: bağlı olduğu grup (course_id)
+    ordinal             INT,
     PRIMARY KEY (program_id, course_id)
 );
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS delivery_mode TEXT;
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS is_elective_group BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS group_course_count INT;
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS elective_group_id BIGINT;
 CREATE INDEX IF NOT EXISTS program_courses_course_idx ON program_courses(course_id);
+CREATE INDEX IF NOT EXISTS program_courses_group_idx ON program_courses(program_id, elective_group_id);
 
 CREATE TABLE IF NOT EXISTS course_learning_outcomes (
     course_id    BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
@@ -178,8 +193,12 @@ JOIN programs p          ON p.id = po.program_id;
 CREATE OR REPLACE VIEW v_curriculum AS
 SELECT u.name AS unit_name, p.id AS program_id, p.name AS program_name, p.level,
        pc.semester, c.id AS course_id, c.code, c.name AS course_name,
-       pc.course_type, c.theory_hours, c.practice_hours, c.credit, c.ects
+       pc.course_type, c.theory_hours, c.practice_hours, c.credit, c.ects,
+       -- yeni sütunlar sona eklenir (CREATE OR REPLACE VIEW sütun sırasını değiştiremez)
+       c.lab_hours, pc.delivery_mode, pc.is_elective_group, pc.group_course_count,
+       pc.elective_group_id, g.code AS elective_group_code, g.name AS elective_group_name
 FROM program_courses pc
 JOIN programs p ON p.id = pc.program_id
 JOIN courses c  ON c.id = pc.course_id
+LEFT JOIN courses g ON g.id = pc.elective_group_id
 LEFT JOIN units u ON u.id = p.unit_id;

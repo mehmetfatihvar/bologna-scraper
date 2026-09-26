@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding/charmap"
@@ -225,8 +226,15 @@ func toUTF8(body []byte, contentType string) []byte {
 	if name == "utf-8" || enc == nil {
 		return body
 	}
-	if !certain && name == "windows-1252" { // bildirim yok: Türkçe site için 1254 daha doğru tahmin
-		enc = charmap.Windows1254
+	if !certain {
+		// Bildirim yok. DetermineEncoding yalnızca ilk 1 KB'a bakar; OİBS sayfalarının başı saf ASCII
+		// olduğundan UTF-8 sayfayı windows-1252 sanar. Tüm gövde geçerli UTF-8 ise dokunma.
+		if utf8.Valid(body) {
+			return body
+		}
+		if name == "windows-1252" { // Türkçe site için 1254 daha doğru tahmin
+			enc = charmap.Windows1254
+		}
 	}
 	out, err := enc.NewDecoder().Bytes(body)
 	if err != nil {

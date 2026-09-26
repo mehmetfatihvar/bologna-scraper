@@ -5,43 +5,65 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 // CurriculumEntry, ders planındaki bir satır (program ↔ ders ilişkisi).
+//
+// OİBS seçmeli dersleri iki katmanlı gösterir: bir "grup" satırı (ör. "OSD GÜZ2",
+// kaç ders seçileceği "Grup Ders Adedi"nde) ve altında açılan havuz dersleri.
+// Grup satırı IsGroup=true ile, havuz dersleri GroupID=<grup satırının ID'si> ile gelir.
 type CurriculumEntry struct {
-	CourseID int64    `json:"course_id"` // curCourse
-	Semester int      `json:"semester,omitempty"`
-	Code     string   `json:"code,omitempty"`
-	Name     string   `json:"name,omitempty"`
-	Type     string   `json:"type,omitempty"` // zorunlu | secmeli | ham değer
-	Theory   *int     `json:"theory,omitempty"`
-	Practice *int     `json:"practice,omitempty"`
-	Credit   *float64 `json:"credit,omitempty"`
-	ECTS     *float64 `json:"ects,omitempty"`
+	CourseID   int64    `json:"course_id"` // curCourse (grup satırında grubun ID'si)
+	Semester   int      `json:"semester,omitempty"`
+	Code       string   `json:"code,omitempty"`
+	Name       string   `json:"name,omitempty"`
+	Type       string   `json:"type,omitempty"` // zorunlu | secmeli | ham değer
+	Theory     *int     `json:"theory,omitempty"`
+	Practice   *int     `json:"practice,omitempty"`
+	Lab        *int     `json:"lab,omitempty"`
+	Credit     *float64 `json:"credit,omitempty"`
+	ECTS       *float64 `json:"ects,omitempty"`
+	Delivery   string   `json:"delivery,omitempty"` // Öğretim Şekli: Yüz Yüze | Uzaktan …
+	IsGroup    bool     `json:"is_group,omitempty"`
+	GroupCount *int     `json:"group_count,omitempty"` // grup satırında: seçilecek ders adedi
+	GroupID    int64    `json:"group_id,omitempty"`    // havuz dersinde: bağlı olduğu grup
 }
 
 type Curriculum struct {
 	Entries []CurriculumEntry `json:"entries"`
+	// Sayfa başlığından: "MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler"
+	UnitName    string `json:"unit_name,omitempty"`
+	ProgramName string `json:"program_name,omitempty"`
+	Year        *int   `json:"year,omitempty"` // seçili ders planı yılı (cmbYillar)
 	// Links: ders planı tablolarındaki, ders detayı olmayan alt sayfa linkleri
 	// (ör. seçmeli ders havuzları). Scraper bunları bir seviye takip eder.
 	Links []string `json:"links,omitempty"`
 }
 
 var (
-	reCourseID = regexp.MustCompile(`(?i)curCourse=(\d+)`)
-	reSemester = regexp.MustCompile(`(\d{1,2})\s*\.?\s*(?:yariyil|donem|semester|yy)`)
-	reAspx     = regexp.MustCompile(`(?i)([\w./-]+\.aspx(?:\?[^'"\s)]*)?)`)
+	// Eski şablon href="progCourseDetails.aspx?curCourse=N", güncel şablon onclick="prolizOpenCourseDetails(N)".
+	reCourseID  = regexp.MustCompile(`(?i)(?:curCourse=|prolizOpenCourseDetails\(\s*['"]?)(\d+)`)
+	reGroupID   = regexp.MustCompile(`(?i)toggleRow\(\s*this\s*,\s*['"]?(\d+)`)
+	reGroupRow  = regexp.MustCompile(`(?i)\bcollapse_(\d+)\b`)
+	reSemester  = regexp.MustCompile(`(\d{1,2})\s*\.?\s*(?:yariyil|donem|semester|yy)`)
+	reAspx      = regexp.MustCompile(`(?i)([\w./-]+\.aspx(?:\?[^'"\s)]*)?)`)
+	reHeaderTag = regexp.MustCompile(`(?i)\s*-\s*(?:dersler|courses)\s*$`)
 )
 
-func courseIDFrom(refs []string) int64 {
+func firstMatchID(re *regexp.Regexp, refs ...string) int64 {
 	for _, r := range refs {
-		if m := reCourseID.FindStringSubmatch(r); m != nil {
+		if m := re.FindStringSubmatch(r); m != nil {
 			id, _ := strconv.ParseInt(m[1], 10, 64)
 			return id
 		}
 	}
 	return 0
 }
+
+func courseIDFrom(refs []string) int64 { return firstMatchID(reCourseID, refs...) }
 
 // PageLinks, href/onclick değerlerinden .aspx linklerini çıkarır.
 func PageLinks(refs []string) []string {
@@ -71,11 +93,12 @@ func normType(s string) string {
 
 // ParseCurriculum, progCourses.aspx?curSunit=… sayfasını ayrıştırır.
 func ParseCurriculum(body []byte) (*Curriculum, error) {
-	ts, _, err := ParseTables(bytes.NewReader(body))
+	ts, doc, err := ParseTables(bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	cur := &Curriculum{}
+	parseCurriculumHeader(doc, cur)
 	seen := map[int64]int{} // courseID -> index
 	linkSeen := map[string]bool{}
 	lastSem := 0
@@ -89,7 +112,7 @@ func ParseCurriculum(body []byte) (*Curriculum, error) {
 		if hi < 0 {
 			continue
 		}
-		col := struct{ code, name, typ, tu, t, u, credit, ects int }{
+		col := struct{ code, name, typ, tu, t, u, credit, ects, group, delivery int }{
 			code: colIndex(hdr, func(h string) bool { return strings.Contains(h, "kod") || strings.Contains(h, "code") }),
 			name: colIndex(hdr, func(h string) bool {
 				return (strings.Contains(h, "adi") || strings.HasPrefix(h, "ders") || strings.Contains(h, "name") || strings.Contains(h, "title")) && !strings.Contains(h, "kod")
@@ -97,19 +120,34 @@ func ParseCurriculum(body []byte) (*Curriculum, error) {
 			typ: colIndex(hdr, func(h string) bool {
 				return h == "z/s" || strings.Contains(h, "tur") || strings.Contains(h, "zorunlu") || strings.Contains(h, "secmeli") || h == "c/e" || strings.Contains(h, "type")
 			}),
-			tu:     colIndex(hdr, func(h string) bool { return strings.HasPrefix(h, "t+u") }),
-			t:      colIndex(hdr, func(h string) bool { return h == "t" }),
-			u:      colIndex(hdr, func(h string) bool { return h == "u" }),
-			credit: colIndex(hdr, func(h string) bool { return strings.Contains(h, "kredi") || strings.Contains(h, "credit") }),
-			ects:   colIndex(hdr, func(h string) bool { return strings.Contains(h, "akts") || strings.Contains(h, "ects") }),
+			tu:       colIndex(hdr, func(h string) bool { return strings.HasPrefix(h, "t+u") }),
+			t:        colIndex(hdr, func(h string) bool { return h == "t" }),
+			u:        colIndex(hdr, func(h string) bool { return h == "u" }),
+			credit:   colIndex(hdr, func(h string) bool { return strings.Contains(h, "kredi") || strings.Contains(h, "credit") }),
+			ects:     colIndex(hdr, func(h string) bool { return strings.Contains(h, "akts") || strings.Contains(h, "ects") }),
+			group:    colIndex(hdr, func(h string) bool { return strings.Contains(h, "grup") || strings.Contains(h, "group") }),
+			delivery: colIndex(hdr, func(h string) bool { return strings.Contains(h, "ogretim sekli") || strings.Contains(h, "delivery") }),
 		}
 
 		for ri, row := range t.Rows {
 			if ri <= hi {
+				// Başlık satırından önceki "1.Yarıyıl Ders Planı" satırı ilk yarıyılı belirler.
+				if m := reSemester.FindStringSubmatch(Norm(strings.Join(row.Texts(), " "))); m != nil {
+					lastSem, _ = strconv.Atoi(m[1])
+				}
 				continue
 			}
 			id := courseIDFrom(row.Refs)
+			groupID := firstMatchID(reGroupID, row.Refs...)
+			if id == 0 && groupID != 0 {
+				id = groupID // seçmeli grup satırı: detay sayfası yok, ID'si havuzu bağlar
+			}
 			if id == 0 {
+				// Güncel şablonda yarıyıl başlıkları tablonun içinde ayrı satırdır: "1.Yarıyıl Ders Planı"
+				if m := reSemester.FindStringSubmatch(Norm(strings.Join(row.Texts(), " "))); m != nil {
+					lastSem, _ = strconv.Atoi(m[1])
+					continue
+				}
 				for _, l := range PageLinks(row.Refs) {
 					ln := strings.ToLower(l)
 					if strings.Contains(ln, "progcoursedetails") || strings.HasPrefix(ln, "index.aspx") || linkSeen[l] {
@@ -128,11 +166,22 @@ func ParseCurriculum(body []byte) (*Curriculum, error) {
 				Type:     normType(row.Cell(col.typ)),
 				Credit:   Float(row.Cell(col.credit)),
 				ECTS:     Float(row.Cell(col.ects)),
+				Delivery: Clean(row.Cell(col.delivery)),
 			}
 			if col.tu >= 0 {
-				e.Theory, e.Practice = SplitTU(row.Cell(col.tu))
+				e.Theory, e.Practice, e.Lab = SplitTUL(row.Cell(col.tu))
 			} else {
 				e.Theory, e.Practice = Int(row.Cell(col.t)), Int(row.Cell(col.u))
+			}
+			if groupID != 0 && courseIDFrom(row.Refs) == 0 {
+				e.IsGroup = true
+				e.GroupCount = Int(row.Cell(col.group))
+			}
+			if m := reGroupRow.FindStringSubmatch(row.Class); m != nil {
+				e.GroupID, _ = strconv.ParseInt(m[1], 10, 64)
+				if e.Type == "" {
+					e.Type = "secmeli"
+				}
 			}
 			if idx, ok := seen[id]; ok {
 				if cur.Entries[idx].Semester == 0 {
@@ -154,4 +203,29 @@ func ParseCurriculum(body []byte) (*Curriculum, error) {
 		}
 	}
 	return cur, nil
+}
+
+// parseCurriculumHeader, "FAKÜLTE / PROGRAM - Dersler" başlığını ve seçili plan yılını okur.
+func parseCurriculumHeader(doc *html.Node, cur *Curriculum) {
+	walkNodes(doc, func(n *html.Node) bool {
+		if n.Type != html.ElementNode {
+			return true
+		}
+		switch {
+		case n.DataAtom == atom.Span && strings.EqualFold(attr(n, "id"), "lblProgInfoDers"):
+			h := reHeaderTag.ReplaceAllString(Clean(textOf(n)), "")
+			if unit, prog, ok := strings.Cut(h, " / "); ok {
+				cur.UnitName, cur.ProgramName = Clean(unit), Clean(prog)
+			} else {
+				cur.ProgramName = h
+			}
+			return false
+		case n.DataAtom == atom.Option && attr(n, "selected") != "" && cur.Year == nil:
+			if y := Int(textOf(n)); y != nil && *y > 1900 {
+				cur.Year = y
+			}
+			return false
+		}
+		return true
+	})
 }

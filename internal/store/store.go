@@ -164,38 +164,49 @@ func (s *Store) CourseFresh(ctx context.Context, courseID int64, since time.Time
 	return ok, err
 }
 
-func (s *Store) Curriculum(ctx context.Context, programID int64, entries []parse.CurriculumEntry) error {
+func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curriculum) error {
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `DELETE FROM program_courses WHERE program_id = $1`, programID); err != nil {
 			return err
 		}
+		if cur.Year != nil {
+			if _, err := tx.Exec(ctx, `UPDATE programs SET curriculum_year = $2 WHERE id = $1`, programID, *cur.Year); err != nil {
+				return err
+			}
+		}
 		b := &pgx.Batch{}
-		for i, e := range entries {
+		for i, e := range cur.Entries {
 			sem := &e.Semester
 			if e.Semester == 0 {
 				sem = nil
 			}
-			// Ders henüz yoksa plandaki bilgilerle bir "taslak" oluştur; detay sayfası sonra zenginleştirir.
+			// Ders plandaki güncel bilgilerle yazılır (plan ve detay sayfası aynı kaynaktan; en yeni değer kazanır,
+			// boş gelen alan eskisini silmez). Sahip program ilk yazanda kalır. Detay sayfası sonra zenginleştirir.
 			b.Queue(`
-				INSERT INTO courses (id, program_id, code, name, semester, theory_hours, practice_hours, credit, ects)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+				INSERT INTO courses (id, program_id, code, name, semester, theory_hours, practice_hours, lab_hours, credit, ects)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 				ON CONFLICT (id) DO UPDATE SET
 					program_id     = COALESCE(courses.program_id, EXCLUDED.program_id),
-					code           = COALESCE(courses.code, EXCLUDED.code),
-					name           = COALESCE(courses.name, EXCLUDED.name),
-					semester       = COALESCE(courses.semester, EXCLUDED.semester),
-					theory_hours   = COALESCE(courses.theory_hours, EXCLUDED.theory_hours),
-					practice_hours = COALESCE(courses.practice_hours, EXCLUDED.practice_hours),
-					credit         = COALESCE(courses.credit, EXCLUDED.credit),
-					ects           = COALESCE(courses.ects, EXCLUDED.ects),
+					code           = COALESCE(EXCLUDED.code, courses.code),
+					name           = COALESCE(EXCLUDED.name, courses.name),
+					semester       = COALESCE(EXCLUDED.semester, courses.semester),
+					theory_hours   = COALESCE(EXCLUDED.theory_hours, courses.theory_hours),
+					practice_hours = COALESCE(EXCLUDED.practice_hours, courses.practice_hours),
+					lab_hours      = COALESCE(EXCLUDED.lab_hours, courses.lab_hours),
+					credit         = COALESCE(EXCLUDED.credit, courses.credit),
+					ects           = COALESCE(EXCLUDED.ects, courses.ects),
 					updated_at     = now()`,
-				e.CourseID, programID, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Credit, e.ECTS)
+				e.CourseID, programID, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
 			b.Queue(`
-				INSERT INTO program_courses (program_id, course_id, semester, course_type, ordinal)
-				VALUES ($1,$2,$3,$4,$5)
+				INSERT INTO program_courses (program_id, course_id, semester, course_type, delivery_mode,
+					is_elective_group, group_course_count, elective_group_id, ordinal)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 				ON CONFLICT (program_id, course_id) DO UPDATE SET
-					semester = EXCLUDED.semester, course_type = EXCLUDED.course_type, ordinal = EXCLUDED.ordinal`,
-				programID, e.CourseID, sem, nz(e.Type), i)
+					semester = EXCLUDED.semester, course_type = EXCLUDED.course_type,
+					delivery_mode = EXCLUDED.delivery_mode, is_elective_group = EXCLUDED.is_elective_group,
+					group_course_count = EXCLUDED.group_course_count,
+					elective_group_id = EXCLUDED.elective_group_id, ordinal = EXCLUDED.ordinal`,
+				programID, e.CourseID, sem, nz(e.Type), nz(e.Delivery), e.IsGroup, e.GroupCount, nzID(e.GroupID), i)
 		}
 		return tx.SendBatch(ctx, b).Close()
 	})

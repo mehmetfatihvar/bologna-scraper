@@ -66,6 +66,19 @@ func TestUndeclaredLegacyEncodingAssumedTurkish(t *testing.T) {
 	}
 }
 
+// Gerçek OİBS sayfası: charset bildirimi yok, ilk 1 KB saf ASCII, Türkçe metin çok sonra.
+func TestUndeclaredUTF8WithLongASCIIPrefixKept(t *testing.T) {
+	page := "<html><head>" + strings.Repeat("<link href='x.css' rel='stylesheet' />", 100) + "</head><body>MÜHENDİSLİK FAKÜLTESİ 1.Yarıyıl</body></html>"
+	c, srv := newTest(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(page))
+	}, Options{})
+	b, _ := c.Get(context.Background(), srv.URL+"/x")
+	if string(b) != page {
+		t.Fatalf("UTF-8 sayfa bozuldu: %q", b[len(b)-60:])
+	}
+}
+
 func TestRetryOn429ThenOK(t *testing.T) {
 	var n atomic.Int32
 	c, srv := newTest(t, func(w http.ResponseWriter, r *http.Request) {

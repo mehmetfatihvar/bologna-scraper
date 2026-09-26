@@ -102,7 +102,7 @@ func ParseUnitSelection(r io.Reader) ([]ProgramRef, []UnitLink, error) {
 				heading, headingUnit = text, unit
 				return
 			}
-			if isHeadingNode(n) && text != "" && len([]rune(text)) < 200 && !hasLinkDescendant(n) {
+			if isHeadingNode(n) && looksLikeUnitName(text) && !hasLinkDescendant(n) {
 				heading, headingUnit = text, 0
 			}
 		}
@@ -112,6 +112,21 @@ func ParseUnitSelection(r io.Reader) ([]ProgramRef, []UnitLink, error) {
 	}
 	walk(doc)
 	return programs, units, nil
+}
+
+// looksLikeUnitName, gerçek sayfadaki "…artı(+) butonuna basınız" gibi yardım metinlerini eler.
+// Emin olunamayan birim adı boş bırakılır; kesin ad ders planı başlığından gelir.
+func looksLikeUnitName(text string) bool {
+	if text == "" || len([]rune(text)) > 80 {
+		return false
+	}
+	n := Norm(text)
+	for _, w := range []string{"basiniz", "tiklayiniz", "seciniz", "listelemek", "click", "select"} {
+		if strings.Contains(n, w) {
+			return false
+		}
+	}
+	return true
 }
 
 func hasLinkDescendant(n *html.Node) bool {

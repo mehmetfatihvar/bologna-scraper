@@ -49,7 +49,7 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
                           │                            │
                           N─M courses (curCourse) ──── course_program_outcomes (katkı 1-5)
                    program_courses                │
-                   (yarıyıl, Z/S)                 ├─ course_learning_outcomes
+                   (yarıyıl, Z/S, seçmeli grup)   ├─ course_learning_outcomes
                                                   ├─ course_weekly_topics
                                                   ├─ course_resources
                                                   ├─ course_assessments
@@ -60,12 +60,25 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
   Ders planı ve dersin alt tabloları her yazımda **değiştirilir** (plandan çıkan ders ilişkisi silinir).
 - Bir ders birden çok programın planında olabilir (`program_courses`); detay sayfası bir çalışmada
   yalnızca bir kez indirilir. `courses.program_id` dersin sahibi (ilk yazan) programdır ve katkı matrisi o programın çıktılarına bağlanır.
+- Seçmeli dersler iki katmanlıdır: grup satırı (`program_courses.is_elective_group`, kaç ders
+  seçileceği `group_course_count`, ör. "NORMAL EĞİTİM PAKETİ" → 5) ve ona `elective_group_id` ile
+  bağlı havuz dersleri. `v_curriculum` grup kodu/adını da gösterir. Grup satırlarının detay sayfası yoktur.
+- `programs.curriculum_year`: taranan ders planının yılı (sitede seçili olan, genelde en güncel).
 - `units.levels` bir dizidir: enstitüler hem yüksek lisans hem doktora programı barındırır.
 - Program çıktısı açıklamaları üç kaynaktan gelir, öncelik sırası: `outcomes_page` > `course_matrix` > `about_text` (`program_outcomes.source`).
   Resmî çıktı sayfası geldiğinde metinden tahmin edilip listede olmayan maddeler silinir.
 - Katkı matrisi üç düzende okunur: `No | Çıktı | Düzey`, `No | Çıktı | 1..5 (X işaretli)` ve yatay `PÇ1 | PÇ2 | …` (ÖÇ×PÇ ise her PÇ için en yüksek düzey).
 - Tanınmayan bölümler kaybolmaz: `programs.sections`, `programs.info`, `courses.details` (JSONB).
 - Hazır view'lar: `v_curriculum`, `v_course_outcome_matrix`. Hatalar: `scrape_errors`.
+
+## Gerçek siteye dair notlar
+
+- Ders linkleri `href` değil `onclick="prolizOpenCourseDetails(ID)"`; ID `progCourseDetails.aspx?curCourse=ID`'ye gider.
+- Ders planı tek tablodur; "1.Yarıyıl Ders Planı" satırları yarıyılı, `collapse_<grup>` sınıfı havuz üyeliğini belirtir.
+- Keşif sayfasındaki fakülte başlıkları güvenilir okunamıyor; birim adı ders planı başlığından
+  ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") alınır.
+- Sayfalarda `<meta charset>` yok; sunucu başlığı yoksa geçerli UTF-8 olduğu varsayılır.
+- "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) birçok programda aynıdır; detayları bir kez indirilir.
 
 ## Parser nasıl çalışır / siteye uyarlama
 
@@ -85,8 +98,10 @@ make lint
 
 CI: `.github/workflows/bologna-scraper.yml` (PostgreSQL servisiyle).
 
-> **Önemli:** `internal/parse/testdata` altındaki fixture'lar **sentetiktir**; gerçek OİBS sayfasıyla
-> henüz doğrulanmadı. İlk iş olarak gerçek sayfaları kaydedip parser'ı onlara karşı kontrol edin:
+`internal/parse/testdata/real/` gerçek OİBS sayfalarıdır (Bilgisayar Mühendisliği, 1371; ViewState
+kırpıldı). Program bilgisi ve ders planı parser'ları bunlara karşı test edilir. Diğer fixture'lar
+sentetiktir; ders detayı ve program yeterlilikleri sayfaları henüz gerçek sayfayla doğrulanmadı.
+Yeni gerçek sayfa eklemek için:
 >
 > ```bash
 > bologna inspect "unitSelection.aspx?type=lis" --as units --save internal/parse/testdata/real_units.html

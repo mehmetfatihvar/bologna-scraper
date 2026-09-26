@@ -146,3 +146,71 @@ func TestMatrixWideLayout(t *testing.T) {
 		}
 	}
 }
+
+// ---- Gerçek OİBS sayfaları (testdata/real, obs.mersin.edu.tr'den 2026-09-26'da alındı; ViewState kırpıldı) ----
+
+func TestRealCurriculum(t *testing.T) {
+	c, err := ParseCurriculum(fixture(t, "real/progCourses_1371.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.UnitName != "MÜHENDİSLİK FAKÜLTESİ" || c.ProgramName != "BİLGİSAYAR MÜHENDİSLİĞİ" || c.Year == nil || *c.Year != 2026 {
+		t.Fatalf("başlık: %q %q %v", c.UnitName, c.ProgramName, c.Year)
+	}
+	if len(c.Entries) != 345 {
+		t.Fatalf("345 kayıt beklendi, %d", len(c.Entries))
+	}
+	byID := map[int64]CurriculumEntry{}
+	groups, pool, bySem := 0, 0, map[int]int{}
+	for _, e := range c.Entries {
+		byID[e.CourseID] = e
+		bySem[e.Semester]++
+		if e.IsGroup {
+			groups++
+		}
+		if e.GroupID != 0 {
+			pool++
+		}
+	}
+	if groups != 17 || pool != 285 || bySem[0] != 0 || bySem[1] != 9 || bySem[8] != 29 {
+		t.Fatalf("grup=%d havuz=%d yarıyıl=%v", groups, pool, bySem)
+	}
+	e := byID[1098805] // PROGRAMLAMAYA GİRİŞ I
+	if e.Code != "1551014" || e.Semester != 1 || e.Type != "zorunlu" || *e.Theory != 3 || *e.Practice != 2 || *e.Lab != 0 || *e.ECTS != 5 || e.Delivery != "Yüz Yüze" {
+		t.Fatalf("zorunlu ders: %+v", e)
+	}
+	g := byID[1098790] // NORMAL EĞİTİM PAKETİ: 5 ders seçilir
+	if !g.IsGroup || g.Semester != 8 || g.GroupCount == nil || *g.GroupCount != 5 {
+		t.Fatalf("grup: %+v", g)
+	}
+	p := byID[1137367] // SİBER GÜVENLİĞE GİRİŞ, MD-OSD GÜZ2 havuzunda
+	if p.GroupID != 1098854 || p.Type != "secmeli" || p.Delivery != "Uzaktan" || p.Semester != 3 {
+		t.Fatalf("havuz dersi: %+v", p)
+	}
+}
+
+func TestRealProgramAbout(t *testing.T) {
+	p, err := ParseProgramAbout(bytes.NewReader(fixture(t, "real/progAbout_1371.html")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Name != "BİLGİSAYAR MÜHENDİSLİĞİ" || p.Language != "%30 İngilizce" || *p.Duration != 4 || *p.MaxDuration != 7 ||
+		p.Internship != "Var" || p.Head != "Prof. Dr. Erdinç AVAROĞLU" || p.ECTSCoordinator != "Prof. Dr. Zeki YETGİN" {
+		t.Fatalf("temel alanlar: %+v", p)
+	}
+	if p.History == "" || p.Degree == "" || p.Admission == "" || p.Progression == "" || p.Graduation == "" || p.Employment == "" || p.Assessment == "" {
+		t.Fatalf("bölümler eksik: %+v", p)
+	}
+	if p.Info["Mezuniyet Unvanı"] != "Bilgisayar Mühendisi" {
+		t.Fatalf("info: %v", p.Info)
+	}
+}
+
+func TestUnitHelpTextIgnored(t *testing.T) {
+	html := `<div class="panel-heading">Fakültelere bağlı programları listelemek için fakültelerin sol tarafında yer alan artı(+) butonuna basınız</div>
+	<a href="index.aspx?curOp=showPac&curUnit=22&curSunit=1371">BİLGİSAYAR MÜHENDİSLİĞİ</a>`
+	ps, _, _ := ParseUnitSelection(bytes.NewReader([]byte(html)))
+	if len(ps) != 1 || ps[0].UnitID != 22 || ps[0].UnitName != "" {
+		t.Fatalf("got %+v", ps)
+	}
+}
