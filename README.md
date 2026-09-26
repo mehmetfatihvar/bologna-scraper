@@ -91,7 +91,9 @@ units (curUnit)  1─N programs (curSunit) 1─N program_outcomes (PÇ no)
 - Keşif sayfasında birim adı `<h5 class="panel-title">` içindedir, ID'si aynı başlıktaki `facAbout.aspx?curUnit=`
   bilgi ikonundadır. Ders planı başlığı ("MÜHENDİSLİK FAKÜLTESİ / BİLGİSAYAR MÜHENDİSLİĞİ - Dersler") ikinci kaynaktır.
 - Sayfalarda `<meta charset>` yok; sunucu başlığı yoksa geçerli UTF-8 olduğu varsayılır.
-- "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) birçok programda aynıdır; detayları bir kez indirilir.
+- "Ortak seçmeli" havuzları (ör. OSD GÜZ2, ~100 ders) her programda aynı dersleri içerir ama her programa ayrı
+  ID'lerle kopyalanmıştır (lisansta 29 bini aşkın farklı havuz ID'si); bu yüzden varsayılan taramada detayları indirilmez.
+- Uzun taramalarda (~1 saat, binlerce istek) sunucu 503 dönmeye başlayabilir; istemci bu durumda tüm istekleri bekletir.
 
 ## Parser nasıl çalışır / siteye uyarlama
 
