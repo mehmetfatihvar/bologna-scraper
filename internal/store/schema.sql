@@ -115,6 +115,8 @@ ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS plan_year INT;
 UPDATE program_courses pc SET plan_year = p.curriculum_year
 FROM programs p WHERE pc.program_id = p.id AND pc.plan_year IS NULL AND p.curriculum_year IS NOT NULL;
 CREATE INDEX IF NOT EXISTS program_courses_year_idx ON program_courses(program_id, plan_year);
+-- Sitedeki plan kimliği: bir yılda birden çok plan olabilir (ör. aynı programda iki ayrı "2026" planı).
+ALTER TABLE program_courses ADD COLUMN IF NOT EXISTS plan_id TEXT;
 CREATE INDEX IF NOT EXISTS program_courses_group_idx ON program_courses(program_id, elective_group_id);
 
 CREATE TABLE IF NOT EXISTS course_learning_outcomes (
@@ -225,7 +227,7 @@ SELECT u.name AS unit_name, p.id AS program_id, p.name AS program_name, p.level,
        -- yeni sütunlar sona eklenir (CREATE OR REPLACE VIEW sütun sırasını değiştiremez)
        c.lab_hours, pc.delivery_mode, pc.is_elective_group, pc.group_course_count,
        pc.elective_group_id, g.code AS elective_group_code, g.name AS elective_group_name,
-       pc.plan_year, (pc.plan_year IS NOT DISTINCT FROM p.curriculum_year) AS is_current
+       pc.plan_year, (pc.plan_year IS NOT DISTINCT FROM p.curriculum_year) AS is_current, pc.plan_id
 FROM program_courses pc
 JOIN programs p ON p.id = pc.program_id
 JOIN courses c  ON c.id = pc.course_id

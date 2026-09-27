@@ -177,9 +177,13 @@ func (s *Store) CourseFresh(ctx context.Context, courseID int64, since time.Time
 
 func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curriculum) error {
 	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		// Yalnızca bu yılın planı değiştirilir; diğer yılların satırları korunur.
-		if _, err := tx.Exec(ctx, `DELETE FROM program_courses WHERE program_id = $1 AND plan_year IS NOT DISTINCT FROM $2`,
-			programID, cur.Year); err != nil {
+		// Yalnızca bu plan değiştirilir; diğer planların satırları korunur. Plan kimliği varsa plan onunla
+		// seçilir (aynı yılda birden çok plan olabilir); kimliksiz eski satırlar yıl eşleşmesiyle temizlenir.
+		if _, err := tx.Exec(ctx, `DELETE FROM program_courses WHERE program_id = $1 AND (
+				($3::text IS NOT NULL AND plan_id = $3) OR
+				(plan_id IS NULL AND plan_year IS NOT DISTINCT FROM $2) OR
+				($3::text IS NULL AND plan_year IS NOT DISTINCT FROM $2))`,
+			programID, cur.Year, nz(cur.PlanID)); err != nil {
 			return err
 		}
 		if cur.Year != nil && !cur.Archived {
@@ -212,14 +216,14 @@ func (s *Store) Curriculum(ctx context.Context, programID int64, cur *parse.Curr
 				e.CourseID, programID, nz(e.Code), nz(e.Name), sem, e.Theory, e.Practice, e.Lab, e.Credit, e.ECTS)
 			b.Queue(`
 				INSERT INTO program_courses (program_id, course_id, semester, course_type, delivery_mode,
-					is_elective_group, group_course_count, elective_group_id, ordinal, plan_year)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+					is_elective_group, group_course_count, elective_group_id, ordinal, plan_year, plan_id)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 				ON CONFLICT (program_id, course_id) DO UPDATE SET
 					semester = EXCLUDED.semester, course_type = EXCLUDED.course_type,
 					delivery_mode = EXCLUDED.delivery_mode, is_elective_group = EXCLUDED.is_elective_group,
 					group_course_count = EXCLUDED.group_course_count,
-					elective_group_id = EXCLUDED.elective_group_id, ordinal = EXCLUDED.ordinal, plan_year = EXCLUDED.plan_year`,
-				programID, e.CourseID, sem, nz(e.Type), nz(e.Delivery), e.IsGroup, e.GroupCount, nzID(e.GroupID), i, cur.Year)
+					elective_group_id = EXCLUDED.elective_group_id, ordinal = EXCLUDED.ordinal, plan_year = EXCLUDED.plan_year, plan_id = EXCLUDED.plan_id`,
+				programID, e.CourseID, sem, nz(e.Type), nz(e.Delivery), e.IsGroup, e.GroupCount, nzID(e.GroupID), i, cur.Year, nz(cur.PlanID))
 		}
 		return tx.SendBatch(ctx, b).Close()
 	})

@@ -40,6 +40,9 @@ type Curriculum struct {
 	Year        *int   `json:"year,omitempty"` // seçili ders planı yılı (cmbYillar)
 	// Years: sayfadaki yıl seçicisinin (cmbYillar) tüm seçenekleri; eski planlar bunlarla istenir.
 	Years []PlanYear `json:"years,omitempty"`
+	// PlanID: seçili planın sitedeki kimliği (yıl seçicinin değeri). Aynı yıla ait birden çok plan
+	// olabildiği için planlar yılla değil bununla ayırt edilir.
+	PlanID string `json:"plan_id,omitempty"`
 	// Archived: bu, sitede varsayılan olarak seçili olmayan eski bir plan (scraper doldurur);
 	// programın güncel plan yılı bununla değişmez.
 	Archived bool `json:"archived,omitempty"`
@@ -248,7 +251,7 @@ func parseCurriculumHeader(doc *html.Node, cur *Curriculum) {
 				cur.Years = append(cur.Years, py)
 				if py.Selected {
 					y := py.Year
-					cur.Year = &y
+					cur.Year, cur.PlanID = &y, py.Value
 				}
 			}
 			return false

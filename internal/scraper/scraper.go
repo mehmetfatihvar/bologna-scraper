@@ -302,7 +302,7 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 		if ctx.Err() != nil {
 			return
 		}
-		yu := curURL + "#" + strconv.Itoa(py.Year)
+		yu := curURL + "#" + strconv.Itoa(py.Year) + "-" + py.Value
 		b, err := YearPostback(ctx, s.Client, curURL, body, py.Value)
 		if err != nil {
 			s.fail(yu, err)
@@ -313,8 +313,8 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 			s.fail(yu, err)
 			continue
 		}
-		if old.Year == nil || *old.Year != py.Year {
-			s.fail(yu, fmt.Errorf("yıl seçilemedi: %d istendi, sayfa %v döndü", py.Year, old.Year))
+		if old.PlanID != py.Value {
+			s.fail(yu, fmt.Errorf("plan seçilemedi: %s (%d) istendi, sayfa %q döndü", py.Value, py.Year, old.PlanID))
 			continue
 		}
 		old.Archived = true
@@ -328,8 +328,8 @@ func (s *Scraper) olderYears(cur *parse.Curriculum) []parse.PlanYear {
 		return nil
 	}
 	var old []parse.PlanYear
-	for _, y := range cur.Years {
-		if !y.Selected && (cur.Year == nil || y.Year != *cur.Year) {
+	for _, y := range cur.Years { // aynı yıla ait birden çok plan olabilir: kimlikle ayırt edilir
+		if !y.Selected && y.Value != cur.PlanID {
 			old = append(old, y)
 		}
 	}

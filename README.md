@@ -230,7 +230,7 @@ Tüm ilişkiler foreign key ile tanımlı. Hazır görünümler (view):
 | Sütun | Anlamı |
 |---|---|
 | `programs.curriculum_year` | Sitede seçili (güncel) ders planı yılı |
-| `program_courses.plan_year` | Satırın ait olduğu plan yılı (eski planlar `--years` ile) |
+| `program_courses.plan_year`, `plan_id` | Satırın ait olduğu plan yılı ve sitedeki plan kimliği (eski planlar `--years` ile; bazı programlarda aynı yıla ait birden çok plan vardır, bunlar `plan_id` ile ayrılır) |
 | `program_courses.is_elective_group`, `group_course_count` | Seçmeli grup satırı ve gruptan seçilecek ders sayısı |
 | `program_courses.elective_group_id` | Havuz dersinin bağlı olduğu grup |
 | `courses.program_id` | Dersin sahibi olan program (katkı matrisi bu programın çıktılarına bağlanır) |
@@ -293,8 +293,9 @@ ve 556 bin katkı matrisi hücresi.
   diğer kopyalara aynı içeriği yazar (`detail_source_id` kaynağı gösterir). Katkı matrisi kopyalara yazılmaz, çünkü
   sayfadaki P1…Pn kaynak programın çıktılarıdır. Bu yöntemle istek sayısı ~30 binden ~4.600'e iner.
 - **Eski yıllar:** ders planı sayfasındaki yıl seçici bir ASP.NET form gönderimidir (postback). Scraper formu
-  (ViewState dahil) tarayıcı gibi geri gönderir. Her yılın planı **ayrı ders ID'lerine** sahiptir, bu yüzden eski planlar
-  `plan_year` ile aynı tablolarda karışmadan durur.
+  (ViewState dahil) tarayıcı gibi geri gönderir. Her planın **ayrı ders ID'leri** vardır, bu yüzden eski planlar
+  aynı tablolarda karışmadan durur. Bazı programlarda aynı yıla ait birden çok plan bulunur (ör. iki ayrı "2026");
+  planlar bu yüzden yılla değil sitedeki plan kimliğiyle (`plan_id`) ayırt edilir.
 - **Boş sayfalar:** içeriği girilmemiş derslerde site "Kayıt Yok..." gösterir; bunlar `detail_empty = true` ile
   işaretlenir (lisansta ~3.300 ders).
 - **Kodlama:** sayfalarda `<meta charset>` yoktur; geçerli UTF-8 değilse `windows-1254` kabul edilir.

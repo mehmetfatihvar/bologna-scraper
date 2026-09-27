@@ -172,6 +172,17 @@ func TestStoreRoundTrip(t *testing.T) {
 	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE program_id = 1 AND is_current`); n != 3 {
 		t.Fatalf("güncel plan: %d", n)
 	}
+	// Aynı yılın iki ayrı planı birbirini silmez (plan kimliğiyle ayrılır).
+	y2027 := 2027
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &y2027, PlanID: "A", Archived: true, Entries: []parse.CurriculumEntry{{CourseID: 301, Code: "A1"}}}))
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &y2027, PlanID: "B", Archived: true, Entries: []parse.CurriculumEntry{{CourseID: 302, Code: "B1"}}}))
+	must(t, st.Curriculum(ctx, 1, &parse.Curriculum{Year: &y2027, PlanID: "A", Archived: true, Entries: []parse.CurriculumEntry{{CourseID: 303, Code: "A2"}}}))
+	if n := st.count(t, `SELECT count(*) FROM v_curriculum WHERE program_id = 1 AND plan_year = 2027`); n != 2 {
+		t.Fatalf("aynı yılın planları: %d", n)
+	}
+	if n := st.count(t, `SELECT count(*) FROM program_courses WHERE program_id = 1 AND plan_id = 'A' AND course_id = 303`); n != 1 {
+		t.Fatal("A planı yeniden yazılmadı")
+	}
 	// Birim tanıtımı; boş ad mevcut adı silmez.
 	must(t, st.UnitAbout(ctx, 7, &parse.UnitAbout{About: "Tanıtım\nİkinci paragraf"}))
 	if n := st.count(t, `SELECT count(*) FROM units WHERE id = 7 AND name = 'FEN BİLİMLERİ ENSTİTÜSÜ' AND about LIKE 'Tanıtım%' AND about_scraped_at IS NOT NULL`); n != 1 {

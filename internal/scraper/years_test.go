@@ -85,3 +85,29 @@ func TestYearPostback(t *testing.T) {
 		t.Fatalf("dönen sayfa: %v", cur.Year)
 	}
 }
+
+// Aynı yıla ait iki plan (sitede görüldü: bir programda iki ayrı "2026"): ikisi de ayrı plan sayılır.
+func TestOlderYearsSameYear(t *testing.T) {
+	y := 2025
+	cur := &parse.Curriculum{Year: &y, PlanID: "10", Years: []parse.PlanYear{
+		{Value: "30", Year: 2026}, {Value: "31", Year: 2026}, {Value: "10", Year: 2025, Selected: true},
+		{Value: "11", Year: 2025}, {Value: "5", Year: 2023},
+	}}
+	var got []string
+	for _, py := range (&Scraper{PlanYears: -1}).olderYears(cur) {
+		got = append(got, py.Value)
+	}
+	if strings.Join(got, ",") != "30,31,11,5" {
+		t.Fatalf("eski planlar: %v", got)
+	}
+	got = nil
+	for _, py := range (&Scraper{PlanYears: 3}).olderYears(cur) {
+		got = append(got, py.Value)
+	}
+	if strings.Join(got, ",") != "30,31" {
+		t.Fatalf("--years 3: %v", got)
+	}
+	if len((&Scraper{}).olderYears(cur)) != 0 {
+		t.Fatal("varsayılan yalnızca güncel plan")
+	}
+}
