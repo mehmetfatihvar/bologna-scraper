@@ -16,7 +16,7 @@ Taranan veriler:
   - değerlendirme ve AKTS iş yükü
   - **öğrenme çıktısı × program çıktısı katkı matrisi**
 
-Sitenin tamamı 2026-09'da taranarak doğrulandı: 4 seviye, 442 program, 50.576 ders ve 0 hata.
+Sitenin tamamı 2026-09'da taranarak doğrulandı: 4 seviye, 442 program, tüm plan yıllarıyla 95.432 ders ve 0 hata.
 Ayrıntılar aşağıdaki [Tam tarama](#6-tam-tarama-süre-ve-sonuçlar) bölümünde.
 
 ---
@@ -273,11 +273,41 @@ SELECT name, left(about, 120) FROM units ORDER BY name;
 | Yüksek lisans + Doktora | 201 | 63 dk | 0 |
 | **Toplam** | **442** | **~3,5 saat** | **0** |
 
-Sonuç: 45 birim, 442 program, 4.598 program çıktısı, 50.576 ders, 233 bin öğrenme çıktısı, 595 bin haftalık konu
-ve 556 bin katkı matrisi hücresi.
+Sonuç (yalnızca güncel planlar): 45 birim, 442 program, 4.598 program çıktısı, 50.576 ders, 233 bin öğrenme
+çıktısı, 595 bin haftalık konu ve 556 bin katkı matrisi hücresi.
 
-`--years all` ile her programın sitedeki eski planları da alınır. Bu durumda süre, yıl sayısıyla orantılı artar
-(ör. 3 yıllık programlarda ~3 kat); gece çalıştırılması önerilir.
+### Eski plan yılları dahil (`--years all`)
+
+2026-09-27'de `scrape --all --pool-details --years all` ile her programın sitedeki tüm plan yılları alındı:
+
+| Tablo | Satır |
+|---|---|
+| units | 45 (tanıtım metinleriyle) |
+| programs | 442 |
+| program_outcomes | 4.598 |
+| courses | 95.432 |
+| program_courses | 95.432 |
+| course_learning_outcomes | 436.894 |
+| course_weekly_topics | 1.115.829 |
+| course_resources | 160.291 |
+| course_assessments | 160.682 |
+| course_workloads | 361.997 |
+| course_program_outcomes | 240.462 |
+| course_outcome_matrix | 930.383 |
+| scrape_errors | 0 |
+
+`courses` ile `program_courses` sayılarının eşit olması, her dersin tam olarak bir plana bağlandığını gösterir.
+
+**Boş veritabanıyla beklenen süreler** (2 istek/sn):
+
+| Komut | Süre |
+|---|---|
+| `scrape --all --pool-details` (güncel planlar) | ~3,5 saat |
+| `scrape --all --pool-details --years all` (tüm yıllar) | ~7 saat |
+| Aynı komutu `--fresh-within 168h` ile tekrar (yalnızca eksikler) | ~20-30 dk |
+
+Uzun taramayı gece çalıştırmanız önerilir. Kesilirse aynı komutu `--fresh-within 24h` ekleyerek
+yeniden başlatın; daha önce yazılmış dersler atlanır.
 
 ---
 
