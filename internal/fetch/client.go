@@ -56,9 +56,14 @@ func IsNotFound(err error) bool {
 }
 
 type Client struct {
-	base     *url.URL
-	opts     Options
-	http     *http.Client
+	base *url.URL
+	opts Options
+	http *http.Client
+	*limiter
+}
+
+// limiter, hız sınırı ve bekleme (cooldown) durumu; bir istemcinin tüm oturumları arasında ortaktır.
+type limiter struct {
 	mu       sync.Mutex
 	next     time.Time
 	interval time.Duration
@@ -90,11 +95,21 @@ func New(o Options) (*Client, error) {
 	// ASP.NET sayfaları oturum çerezi (ASP.NET_SessionId) bekleyebilir.
 	jar, _ := cookiejar.New(nil)
 	return &Client{
-		base:     u,
-		opts:     o,
-		http:     &http.Client{Timeout: o.Timeout, Jar: jar},
-		interval: time.Duration(float64(time.Second) / o.RPS),
+		base:    u,
+		opts:    o,
+		http:    &http.Client{Timeout: o.Timeout, Jar: jar},
+		limiter: &limiter{interval: time.Duration(float64(time.Second) / o.RPS)},
 	}, nil
+}
+
+// Session, kendi çerez kavanozu (ayrı ASP.NET oturumu) olan bir istemci döndürür; hız sınırı ve
+// bekleme durumu bu istemciyle ortaktır. ASP.NET, postback'le seçilen değeri (ör. ders planı yılı)
+// oturumda tutar: aynı oturumu paylaşan başka bir istek yanlış/boş sayfa alabilir.
+func (c *Client) Session() *Client {
+	jar, _ := cookiejar.New(nil)
+	cp := *c
+	cp.http = &http.Client{Timeout: c.opts.Timeout, Jar: jar, Transport: c.http.Transport}
+	return &cp
 }
 
 // URL, base altındaki bir sayfa için tam adres üretir ve lang parametresini ekler.

@@ -1,13 +1,18 @@
 package scraper
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
@@ -109,5 +114,111 @@ func TestOlderYearsSameYear(t *testing.T) {
 	}
 	if len((&Scraper{}).olderYears(cur)) != 0 {
 		t.Fatal("varsayılan yalnızca güncel plan")
+	}
+}
+
+// sessionSite, OİBS'nin oturum davranışını taklit eder: yıl seçici postback'i seçilen planı ASP.NET
+// oturumunda saklar; aynı oturumla başka programın ders planı istenirse sayfa boş döner.
+func sessionSite(t *testing.T) (*httptest.Server, func() int) {
+	t.Helper()
+	plans := map[string]struct {
+		prog, year string
+		course     int
+	}{"100": {"1", "2026", 1001}, "101": {"1", "2025", 1002}, "200": {"2", "2026", 2001}, "201": {"2", "2025", 2002}}
+	current := map[string]string{"1": "100", "2": "200"}
+	page := func(prog, sel string) string {
+		var opts strings.Builder
+		for _, v := range []string{"100", "101", "200", "201"} {
+			if plans[v].prog != prog {
+				continue
+			}
+			s := ""
+			if v == sel {
+				s = ` selected="selected"`
+			}
+			opts.WriteString(`<option` + s + ` value="` + v + `">` + plans[v].year + ` (` + plans[v].year + ` - P)</option>`)
+		}
+		id := strconv.Itoa(plans[sel].course)
+		return `<html><body><form method="post" action="./progCourses.aspx?curSunit=` + prog + `" id="form1">
+<input type="hidden" name="__VIEWSTATE" value="VS" /><select name="cmbYillar">` + opts.String() + `</select>
+<h4>1. Yarıyıl Ders Planı</h4><table><tr><th>Kodu</th><th>Dersin Adı</th><th>Z/S</th><th>AKTS</th></tr>
+<tr><td><a href="progCourseDetails.aspx?curCourse=` + id + `">K` + id + `</a></td><td>Ders</td><td>Z</td><td>5</td></tr></table></form></body></html>`
+	}
+	var mu sync.Mutex
+	sessions := map[string]string{} // oturum -> seçili plan
+	n, empty := 0, 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/progCourses.aspx":
+		case "/progAbout.aspx":
+			_, _ = io.WriteString(w, `<html><body></body></html>`)
+			return
+		default:
+			http.NotFound(w, r)
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		sid := ""
+		if c, err := r.Cookie("ASP.NET_SessionId"); err == nil {
+			sid = c.Value
+		} else {
+			n++
+			sid = strconv.Itoa(n)
+			http.SetCookie(w, &http.Cookie{Name: "ASP.NET_SessionId", Value: sid, Path: "/"})
+		}
+		prog := r.URL.Query().Get("curSunit")
+		sel := current[prog]
+		if r.Method == http.MethodPost {
+			sel = r.FormValue("cmbYillar")
+			sessions[sid] = sel
+		} else if v, ok := sessions[sid]; ok {
+			sel = v
+		}
+		if plans[sel].prog != prog { // oturumdaki plan başka programın: site boş sayfa döner
+			empty++
+			_, _ = io.WriteString(w, `<html><body><form method="post" action="x"></form></body></html>`)
+			return
+		}
+		_, _ = io.WriteString(w, page(prog, sel))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, func() int { mu.Lock(); defer mu.Unlock(); return empty }
+}
+
+// İki program ard arda (aynı istemciyle) taranır: ikincisinin güncel planı, birincisinin yıl seçimi
+// yüzünden boş gelmemelidir.
+func TestPlanYearsSessionIsolation(t *testing.T) {
+	srv, empties := sessionSite(t)
+	c, _ := fetch.New(fetch.Options{BaseURL: srv.URL + "/", RPS: 5000})
+	var out bytes.Buffer
+	sc := &Scraper{Client: c, Sink: NewJSONSink(&out), Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Workers: 1, PlanYears: -1, SkipDetails: true}
+	st := sc.Run(context.Background(), []parse.ProgramRef{{ID: 1}, {ID: 2}})
+	if st.Errors != 0 || st.Programs != 2 || empties() != 0 {
+		t.Fatalf("stats=%+v boş sayfa=%d", st, empties())
+	}
+	var plans []string
+	dec := json.NewDecoder(&out)
+	for dec.More() {
+		var m struct {
+			Type string `json:"type"`
+			Data struct {
+				ProgramID  int64 `json:"program_id"`
+				Curriculum struct {
+					PlanID  string                  `json:"plan_id"`
+					Entries []parse.CurriculumEntry `json:"entries"`
+				} `json:"curriculum"`
+			} `json:"data"`
+		}
+		if err := dec.Decode(&m); err != nil {
+			t.Fatal(err)
+		}
+		if m.Type == "curriculum" {
+			plans = append(plans, strconv.FormatInt(m.Data.ProgramID, 10)+":"+m.Data.Curriculum.PlanID+"/"+strconv.Itoa(len(m.Data.Curriculum.Entries)))
+		}
+	}
+	if strings.Join(plans, ",") != "1:100/1,1:101/1,2:200/1,2:201/1" {
+		t.Fatalf("planlar: %v", plans)
 	}
 }

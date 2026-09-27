@@ -209,3 +209,15 @@ func TestNotFoundDoesNotTriggerCooldown(t *testing.T) {
 		t.Fatal("404 sunucu hatası sayılmamalı")
 	}
 }
+
+// Session: ayrı çerez kavanozu, ortak hız sınırı/bekleme durumu.
+func TestSessionSharesLimiter(t *testing.T) {
+	c, err := New(Options{BaseURL: "http://example.invalid/", RPS: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := c.Session()
+	if s.limiter != c.limiter || s.http == c.http || s.http.Jar == c.http.Jar {
+		t.Fatal("oturum hız sınırını paylaşmalı, çerezleri paylaşmamalı")
+	}
+}

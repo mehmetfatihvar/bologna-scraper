@@ -295,7 +295,9 @@ ve 556 bin katkı matrisi hücresi.
 - **Eski yıllar:** ders planı sayfasındaki yıl seçici bir ASP.NET form gönderimidir (postback). Scraper formu
   (ViewState dahil) tarayıcı gibi geri gönderir. Her planın **ayrı ders ID'leri** vardır, bu yüzden eski planlar
   aynı tablolarda karışmadan durur. Bazı programlarda aynı yıla ait birden çok plan bulunur (ör. iki ayrı "2026");
-  planlar bu yüzden yılla değil sitedeki plan kimliğiyle (`plan_id`) ayırt edilir.
+  planlar bu yüzden yılla değil sitedeki plan kimliğiyle (`plan_id`) ayırt edilir. Site seçilen planı ASP.NET
+  oturumunda tuttuğundan her programın ders planı kendi oturumunda istenir (paylaşılan oturumda başka
+  programın seçimi sayfayı boş döndürür).
 - **Boş sayfalar:** içeriği girilmemiş derslerde site "Kayıt Yok..." gösterir; bunlar `detail_empty = true` ile
   işaretlenir (lisansta ~3.300 ders).
 - **Kodlama:** sayfalarda `<meta charset>` yoktur; geçerli UTF-8 değilse `windows-1254` kabul edilir.

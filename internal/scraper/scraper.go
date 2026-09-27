@@ -277,8 +277,11 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 	}
 
 	// 4) Ders planı: sitede seçili (güncel) yıl, sonra istenen eski yıllar (yıl seçici postback'i ile)
+	// Ders planı kendi ASP.NET oturumunda istenir: site yıl seçimini oturumda tutar; paylaşılan oturumda
+	// başka bir programın seçili planı bu programın sayfasını boş döndürür.
+	sess := s.Client.Session()
 	curURL := s.Client.URL(PageCurriculum, q)
-	body, err := s.Client.Get(ctx, curURL)
+	body, err := sess.Get(ctx, curURL)
 	if err != nil {
 		s.fail(curURL, err)
 		return
@@ -303,7 +306,7 @@ func (s *Scraper) program(ctx context.Context, ref parse.ProgramRef) {
 			return
 		}
 		yu := curURL + "#" + strconv.Itoa(py.Year) + "-" + py.Value
-		b, err := YearPostback(ctx, s.Client, curURL, body, py.Value)
+		b, err := YearPostback(ctx, sess, curURL, body, py.Value)
 		if err != nil {
 			s.fail(yu, err)
 			continue
