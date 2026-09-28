@@ -17,7 +17,7 @@ Taranan veriler:
   - **öğrenme çıktısı × program çıktısı katkı matrisi**
 
 Sitenin tamamı 2026-09'da taranarak doğrulandı: 4 seviye, 442 program, tüm plan yıllarıyla 95.432 ders ve 0 hata.
-Ayrıntılar aşağıdaki [Tam tarama](#6-tam-tarama-süre-ve-sonuçlar) bölümünde.
+Ayrıntılar aşağıdaki [Tam tarama](#6-tam-tarama-süre-ve-sonuçlar) bölümünde; projenin süreci ve kararları [RAPOR.md](RAPOR.md) dosyasında.
 
 ---
 
