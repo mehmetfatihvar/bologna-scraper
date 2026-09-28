@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 // testStore, BOLOGNA_TEST_DB_URL verilmişse geçici bir şemada çalışan Store döndürür.

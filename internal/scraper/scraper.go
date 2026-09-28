@@ -17,8 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 // OİBS Bologna modülünün sayfa adları. Site farklı isim kullanıyorsa sadece burayı değiştirin.

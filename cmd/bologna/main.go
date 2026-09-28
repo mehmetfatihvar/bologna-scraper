@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/cli"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/cli"
 )
 
 func main() {

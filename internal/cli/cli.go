@@ -19,10 +19,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/scraper"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/store"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/scraper"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/store"
 )
 
 type globals struct {

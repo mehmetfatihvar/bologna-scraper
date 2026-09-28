@@ -1,0 +1,29 @@
+name: bologna-scraper
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bologna
+          POSTGRES_PASSWORD: bologna
+          POSTGRES_DB: bologna
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bologna" --health-interval 2s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: make lint
+      - run: make test-integration
+      - run: make build

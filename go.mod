@@ -1,4 +1,4 @@
-module github.com/mehmetfatihvar/staj/staj/bologna-scraper
+module github.com/mehmetfatihvar/bologna-scraper
 
 go 1.22
 

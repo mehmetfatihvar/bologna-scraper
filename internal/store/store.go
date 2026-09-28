@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 //go:embed schema.sql

@@ -15,8 +15,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 // Gerçek sayfadaki yıl seçici: 2026 seçili, 2025 ve 2024 eski planlar.

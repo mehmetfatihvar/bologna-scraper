@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 // FindPlanYear, "2025" gibi bir yılı ya da doğrudan seçenek değerini sayfadaki seçeneklerle eşleştirir.

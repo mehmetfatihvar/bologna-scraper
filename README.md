@@ -41,8 +41,8 @@ En kolay yol budur. Yalnızca [Docker Desktop](https://www.docker.com/products/d
 Go veya PostgreSQL kurmanıza gerek yoktur.
 
 ```bash
-git clone https://github.com/mehmetfatihvar/staj.git
-cd staj/staj/bologna-scraper
+git clone https://github.com/mehmetfatihvar/bologna-scraper.git
+cd bologna-scraper
 
 # 1) PostgreSQL'i başlat (arka planda çalışır, veriler "pgdata" volume'unda kalır)
 docker compose up -d db
@@ -79,8 +79,8 @@ Kapatmak için: `docker compose down`. Verileri de silmek için: `docker compose
 ### 2.2 Derleme
 
 ```bat
-git clone https://github.com/mehmetfatihvar/staj.git
-cd staj\staj\bologna-scraper
+git clone https://github.com/mehmetfatihvar/bologna-scraper.git
+cd bologna-scraper
 go build -o bologna.exe ./cmd/bologna
 bologna.exe --help
 ```
@@ -142,8 +142,8 @@ setx BOLOGNA_DB_URL "postgres://postgres@localhost:5432/bologna?sslmode=disable"
 ## 3. Kurulum: Linux / macOS
 
 ```bash
-git clone https://github.com/mehmetfatihvar/staj.git
-cd staj/staj/bologna-scraper
+git clone https://github.com/mehmetfatihvar/bologna-scraper.git
+cd bologna-scraper
 make build                 # bin/bologna
 make db                    # docker ile PostgreSQL (veya kendi PostgreSQL'iniz)
 export BOLOGNA_DB_URL="postgres://bologna:bologna@localhost:5432/bologna?sslmode=disable"

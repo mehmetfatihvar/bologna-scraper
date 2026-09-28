@@ -1,7 +1,7 @@
 # Bologna Bilgi Paketi Tarayıcısı — Proje Raporu
 
 **Proje:** Mersin Üniversitesi OİBS Bologna Bilgi Paketi → PostgreSQL aktarımı
-**Depo:** https://github.com/mehmetfatihvar/staj (klasör: `staj/bologna-scraper`)
+**Depo:** https://github.com/mehmetfatihvar/bologna-scraper
 **Dil / araçlar:** Go, PostgreSQL, Docker
 **Tarih:** Eylül 2026
 
@@ -174,8 +174,8 @@ plana bağlı olması, hata kaydı bulunmaması) kontrol edildi.
 Ayrıntılı kurulum ve kullanım adımları `README.md` dosyasında yer alıyor. En kısa yol Docker ile:
 
 ```bash
-git clone https://github.com/mehmetfatihvar/staj.git
-cd staj/staj/bologna-scraper
+git clone https://github.com/mehmetfatihvar/bologna-scraper.git
+cd bologna-scraper
 docker compose up -d db
 docker compose --profile scrape run --rm scraper scrape -p 1371                    # tek program, ~1 dk
 docker compose --profile scrape run --rm scraper scrape --all --pool-details       # tüm site

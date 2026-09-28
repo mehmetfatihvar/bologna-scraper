@@ -16,8 +16,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/fetch"
-	"github.com/mehmetfatihvar/staj/staj/bologna-scraper/internal/parse"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/fetch"
+	"github.com/mehmetfatihvar/bologna-scraper/internal/parse"
 )
 
 // fixtureServer, parse/testdata altındaki sayfaları sayfa adına göre sunar ve istekleri sayar.
